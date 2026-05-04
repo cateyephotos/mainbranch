@@ -13,6 +13,9 @@ PyPI distribution `mainbranch` tracks the same version sequence.
 
 ### Added
 
+- Added `bets/` as a first-class business-repo primitive with validation,
+  graph links, `mb status` active-deadline reporting, and the new `/mb-bet`
+  Claude Code workflow for `new`, `update`, `close`, `list`, and `narrate`.
 - Added `mb issue draft` and `mb issue open` so users can turn confusing
   Main Branch friction into privacy-scrubbed local GitHub issue drafts before
   explicitly submitting with `gh issue create`.

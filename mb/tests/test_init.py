@@ -1,4 +1,4 @@
-"""``mb init`` scaffolds the canonical six folders + CLAUDE.md."""
+"""``mb init`` scaffolds the canonical business folders + CLAUDE.md."""
 
 from __future__ import annotations
 
@@ -19,6 +19,7 @@ def test_init_scaffolds_folders(tmp_path: Path) -> None:
     assert (target / "reference" / "proof" / "angles").is_dir()
     assert (target / "reference" / "domain").is_dir()
     assert (target / "reference" / "visual-identity").is_dir()
+    assert (target / "bets").is_dir()
     assert (target / "CLAUDE.md").exists()
     assert (target / ".github" / "CODEOWNERS").exists()
     assert (target / ".gitignore").exists()
@@ -45,6 +46,7 @@ def test_init_scaffolds_folders(tmp_path: Path) -> None:
     assert "MCP server names" in claude_md
     assert "MCP tokens" in claude_md
     assert "Never commit API keys" in claude_md
+    assert "`bets/`" in claude_md
 
 
 def test_init_idempotent(tmp_path: Path) -> None:

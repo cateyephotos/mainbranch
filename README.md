@@ -18,7 +18,7 @@ You're renting your business. Not just the dashboards — the operational memory
 
 The open-source gap closed in 2025. The tools to own your stack exist now. Almost nobody has carved time to migrate, because there's no coherent environment that ties it together.
 
-Main Branch is that environment. Your offer, audience, voice, decisions, research, and campaigns live as markdown files in a git repo you own. The `mb` CLI scaffolds it. The bundled skills read those files and produce work that sounds like you — without re-prompting.
+Main Branch is that environment. Your offer, audience, voice, decisions, research, bets, and campaigns live as markdown files in a git repo you own. The `mb` CLI scaffolds it. The bundled skills read those files and produce work that sounds like you — without re-prompting.
 
 The end state isn't sitting at a terminal all day. It's the opposite — eventually you dump thoughts from your phone, drafts get made, you approve, it executes. We're not all the way there. The work is still real. But the substrate is the right one to build on.
 
@@ -30,7 +30,7 @@ Own the work. Rent only the rails.
 
 ## What it is
 
-Main Branch is the `mb` CLI plus MIT-licensed agent workflows for running business-as-files systems. Today the workflows ship for Claude Code; Codex, Cursor, OpenClaw, Hermes, and local runtimes are next. Your offer, audience, voice, research, decisions, and campaigns live in six folders inside your own git repo — versioned, portable, agent-readable.
+Main Branch is the `mb` CLI plus MIT-licensed agent workflows for running business-as-files systems. Today the workflows ship for Claude Code; Codex, Cursor, OpenClaw, Hermes, and local runtimes are next. Your offer, audience, voice, research, decisions, bets, and campaigns live in your own git repo — versioned, portable, agent-readable.
 
 Read the product frame in [docs/ETHOS.md](docs/ETHOS.md), the user loop in
 [docs/OPERATOR-LOOPS.md](docs/OPERATOR-LOOPS.md), and the release direction in
@@ -78,6 +78,7 @@ git clone https://github.com/noontide-co/mainbranch.git
 Once set up, you can:
 
 - Research topics and document decisions
+- Open, update, close, and narrate business bets
 - Generate batches of ad copy in your voice
 - Create video scripts for Meta ads
 - Generate organic content — Reels, TikTok, carousels — from your reference files and research
@@ -116,6 +117,7 @@ my-business/
 │   └── finance/
 ├── research/
 ├── decisions/
+├── bets/
 ├── log/
 ├── campaigns/
 └── documents/
@@ -150,13 +152,13 @@ The CLI surface for the engine. Built for Claude Code first; runtime-agnostic by
 |---|---|
 | `mb onboard` | Human setup flow: create or connect a business repo, explain the substrate, wire Claude Code skills, and show the next `/mb-start` step. |
 | `mb onboard status` | Show durable onboarding progress from `.mb/onboarding.json`, including missing core-reference inputs and the next recommended action. |
-| `mb init` | Set up a fresh business repo (six folders, CLAUDE.md, git init). |
-| `mb status` | Show a local-first daily briefing: since-last-check changes, drift, repo health, runtime wiring, recent decisions/research/git activity, and GitHub tasks when `gh` is authenticated. Use `--json` for the v1 status schema, `--verbose` for detail, and `--peek` for non-mutating reads. |
+| `mb init` | Set up a fresh business repo (business folders, CLAUDE.md, git init). |
+| `mb status` | Show a local-first daily briefing: since-last-check changes, drift, repo health, runtime wiring, recent decisions/research/bets/git activity, and GitHub tasks when `gh` is authenticated. Use `--json` for the v1 status schema, `--verbose` for detail, and `--peek` for non-mutating reads. |
 | `mb doctor` | Check the environment — repo shape, frontmatter sanity, settings on disk. Walks you through fixes. |
 | `mb connect` | Register provider credentials, test provider health, and inspect repair-safe integration status without committing secrets. |
 | `mb issue draft` | Create a local, privacy-scrubbed GitHub issue draft under `.mb/issue-drafts/` for bugs, feature gaps, or questions. |
 | `mb issue open` | Submit a reviewed issue draft with `gh issue create`, or print a browser/manual fallback when GitHub CLI is unavailable. |
-| `mb validate` | Frontmatter shape check across `core/`, `research/`, `decisions/`, `log/`, `campaigns/`, `documents/`. Pass/fail per file. |
+| `mb validate` | Frontmatter shape check across `core/`, `research/`, `decisions/`, `bets/`, `log/`, `campaigns/`, `documents/`. Pass/fail per file. |
 | `mb graph` | Build a repo graph index from frontmatter links, wikilinks, and entity tags. Emits Graphviz DOT by default, `--json` for agents/dashboards, and `--open` to render a PNG view. |
 | `mb think <topic>` | Print the `/mb-think` invocation hint. Run inside Claude Code for the full flow. |
 | `mb resolve <key>` | Resolve a reference path (checks free first, then paid). |
@@ -211,6 +213,7 @@ Skills are pre-built workflows you invoke with slash prompts. Instead of figurin
 | `/mb-start` | Main entry point — figures out what you need and routes you there |
 | `/mb-setup` | Set up your business repo (run this first if you're new) |
 | `/mb-think` | Research, make decisions, add context, transcribe local recordings, update reference files |
+| `/mb-bet` | Open, update, close, list, and narrate business bets |
 | `/mb-ads` | Create ad copy (static or video) and review for compliance |
 | `/mb-vsl` | Write video sales letter scripts (Skool or B2B) |
 | `/mb-organic` | Generate organic content — Reels, TikTok, carousels |
@@ -292,6 +295,9 @@ No. You invoke skills with slash prompts and answer questions.
 **What if I have multiple products under one brand?**
 Use one repo with an `offers/` folder. Each offer gets its own `offer.md`. Soul and voice stay shared in `core/`. Run `/mb-setup` or `/mb-think` to add offers.
 
+**What's a bet vs. an offer?**
+A bet is a time-boxed operating hypothesis: what you'll try, why, by when, and how you'll know if it worked. An offer is a durable thing you sell. A good bet can graduate into an offer, campaign, workflow, content pillar, or decision; a bad bet gets closed with learning.
+
 **What if I have multiple separate businesses?**
 Create a separate repo for each brand. If they share the same soul and voice, they can share a repo. If not, separate repos.
 
@@ -316,7 +322,7 @@ repairs or layout migrations.
 You can, but you don't need to. They're designed to work out of the box.
 
 **What makes this different from ChatGPT?**
-ChatGPT is a chat surface that resets between sessions. Main Branch is a CLI plus a skill set that reads files Claude can re-read every session — your offer, audience, voice, decisions, research — so outputs stay consistent with your business instead of restarting from zero.
+ChatGPT is a chat surface that resets between sessions. Main Branch is a CLI plus a skill set that reads files Claude can re-read every session — your offer, audience, voice, decisions, research, and bets — so outputs stay consistent with your business instead of restarting from zero.
 
 **I'm stuck. What do I do?**
 Type `/mb-start` again. It picks up where you left off.

@@ -64,6 +64,7 @@
       "items"
     ],
     "brain": [
+      "bets",
       "counts",
       "recent_decisions",
       "recent_research",
