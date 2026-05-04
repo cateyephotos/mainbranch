@@ -25,6 +25,7 @@ from mb import issue as issue_mod
 from mb import migrate as migrate_mod
 from mb import onboard as onboard_mod
 from mb import resolve as resolve_mod
+from mb import similar_bets as similar_bets_mod
 from mb import skill_validate as skill_validate_mod
 from mb import start as start_mod
 from mb import status as status_mod
@@ -796,6 +797,21 @@ def graph_cmd(
         graph_mod.open_dot(dot)
     else:
         typer.echo(dot)
+
+
+@app.command("similar-bets")
+def similar_bets_cmd(
+    thesis: str = typer.Argument(..., help="Current bet thesis to compare against repo memory."),
+    path: str = typer.Option(".", "--repo", help="Business repo to query."),
+    limit: int = typer.Option(5, "--limit", min=1, help="Maximum matches to return."),
+    json_out: bool = typer.Option(False, "--json", help="Machine-readable output."),
+) -> None:
+    """Find similar past bets and offer outcomes from repo truth."""
+    report = similar_bets_mod.run(path=path, thesis=thesis, limit=limit)
+    if json_out:
+        typer.echo(json.dumps(report, indent=2))
+    else:
+        similar_bets_mod.render_human(report)
 
 
 @app.command("think")
