@@ -5,7 +5,7 @@ from __future__ import annotations
 import json
 import shutil
 import subprocess
-from datetime import date, datetime
+from datetime import date, datetime, timezone
 from pathlib import Path
 from typing import Any
 
@@ -17,6 +17,7 @@ from mb.cli import app
 from mb.init import run as init_run
 
 runner = CliRunner()
+FIXTURES = Path(__file__).parent / "fixtures"
 
 
 def _without_github_or_claude(name: str) -> str:
@@ -42,6 +43,9 @@ def test_status_json_degrades_without_github(tmp_path: Path, monkeypatch) -> Non
 
     assert result.exit_code == 0
     report = json.loads(result.stdout)
+    assert report["schema_version"] == "1.0"
+    assert report["schema"]["name"] == "mainbranch.status"
+    assert report["generated_at"]
     assert report["repo"]["looks_like_mainbranch_repo"] is True
     assert report["runtime"]["skill_wiring"]["ok"] is True
     assert report["github"]["authenticated"] is False
@@ -49,8 +53,52 @@ def test_status_json_degrades_without_github(tmp_path: Path, monkeypatch) -> Non
     assert "assigned_tasks" in report["github"]["sections"]
     assert report["brain"]["counts"]["decisions"] == 1
     assert report["brain"]["recent_research"][0]["title"] == "Market"
+    assert report["since_last_check"]["first_run"] is True
+    assert report["marker_update"]["ok"] is True
+    assert (repo / ".mb" / "last-status-seen.json").is_file()
     assert "readiness" in report
     assert "update" in report
+
+
+def test_status_schema_v1_matches_golden_fixture(tmp_path: Path, monkeypatch) -> None:
+    monkeypatch.setattr(status_mod, "_which", _without_github_or_claude)
+    repo = tmp_path / "acme"
+    init_run(path=str(repo), name="Acme")
+
+    payload = status_mod.run(
+        path=str(repo),
+        now=datetime(2026, 5, 4, 12, 0, tzinfo=timezone.utc),
+        update_marker=False,
+    )
+    actual = {
+        "schema_version": payload["schema_version"],
+        "schema_name": payload["schema"]["name"],
+        "top_level_keys": sorted(payload.keys()),
+        "section_keys": {
+            key: sorted(payload[key].keys())
+            for key in [
+                "repo",
+                "install",
+                "update",
+                "runtime",
+                "git",
+                "git_activity",
+                "brain",
+                "onboarding",
+                "integrations",
+                "github",
+                "since_last_check",
+                "drift",
+                "readiness",
+                "marker_update",
+            ]
+        },
+    }
+    expected = json.loads(
+        (FIXTURES / "status" / "schema-v1-basic.json").read_text(encoding="utf-8")
+    )
+
+    assert actual == expected
 
 
 def test_status_human_output_mentions_core_sections(tmp_path: Path, monkeypatch) -> None:
@@ -63,9 +111,86 @@ def test_status_human_output_mentions_core_sections(tmp_path: Path, monkeypatch)
     assert result.exit_code == 0
     assert "mb status" in result.stdout
     assert "Repo" in result.stdout
+    assert "Since last check" in result.stdout
+    assert "Drift" in result.stdout
     assert "Runtime" in result.stdout
     assert "GitHub" in result.stdout
     assert "Next" in result.stdout
+
+
+def test_status_since_last_check_uses_repo_marker(tmp_path: Path, monkeypatch) -> None:
+    monkeypatch.setattr(status_mod, "_which", _without_github_or_claude)
+    repo = tmp_path / "acme"
+    init_run(path=str(repo), name="Acme")
+
+    first = runner.invoke(app, ["status", str(repo), "--json"])
+    assert first.exit_code == 0
+    first_payload = json.loads(first.stdout)
+    assert first_payload["since_last_check"]["first_run"] is True
+
+    (repo / "research" / "2026-05-02-market.md").write_text("# Market\n", encoding="utf-8")
+    second = runner.invoke(app, ["status", str(repo), "--json"])
+
+    assert second.exit_code == 0
+    second_payload = json.loads(second.stdout)
+    assert second_payload["since_last_check"]["first_run"] is False
+    assert second_payload["since_last_check"]["previous_seen_at"] == first_payload["generated_at"]
+    assert {
+        "folder": "research",
+        "before": 0,
+        "after": 1,
+        "delta": 1,
+    } in second_payload["since_last_check"]["brain_count_changes"]
+
+
+def test_status_peek_does_not_update_seen_marker(tmp_path: Path, monkeypatch) -> None:
+    monkeypatch.setattr(status_mod, "_which", _without_github_or_claude)
+    repo = tmp_path / "acme"
+    init_run(path=str(repo), name="Acme")
+
+    first = runner.invoke(app, ["status", str(repo), "--json"])
+    marker_before = (repo / ".mb" / "last-status-seen.json").read_text(encoding="utf-8")
+    peek = runner.invoke(app, ["status", str(repo), "--json", "--peek"])
+    marker_after = (repo / ".mb" / "last-status-seen.json").read_text(encoding="utf-8")
+
+    assert first.exit_code == 0
+    assert peek.exit_code == 0
+    payload = json.loads(peek.stdout)
+    assert payload["marker_update"]["reason"] == "disabled"
+    assert marker_after == marker_before
+
+
+def test_marker_gitignore_state_honors_broader_gitignore_patterns(
+    tmp_path: Path, monkeypatch
+) -> None:
+    repo = tmp_path / "repo"
+    repo.mkdir()
+    runner.invoke(app, ["init", str(repo), "--name", "Acme"])
+    (repo / ".gitignore").write_text(".mb/\n", encoding="utf-8")
+
+    state = status_mod._marker_gitignore_state(repo)
+
+    assert state["ok"] is True
+    assert state["repair"] == ""
+
+
+def test_status_no_color_and_verbose_output(tmp_path: Path, monkeypatch) -> None:
+    monkeypatch.setattr(status_mod, "_which", _without_github_or_claude)
+    repo = tmp_path / "acme"
+    init_run(path=str(repo), name="Acme")
+    (repo / "decisions" / "2026-05-01-pricing.md").write_text(
+        "---\ndate: 2026-05-01\nstatus: accepted\n---\n\n# Pricing\n",
+        encoding="utf-8",
+    )
+
+    terse = runner.invoke(app, ["status", str(repo), "--no-color"])
+    verbose = runner.invoke(app, ["status", str(repo), "--verbose", "--no-color"])
+
+    assert terse.exit_code == 0
+    assert "\x1b[" not in terse.stdout
+    assert "Recent decisions" not in terse.stdout
+    assert verbose.exit_code == 0
+    assert "Recent decisions" in verbose.stdout
 
 
 def test_status_required_update_json_and_human_copy(tmp_path: Path, monkeypatch) -> None:
@@ -98,7 +223,7 @@ def test_status_required_update_json_and_human_copy(tmp_path: Path, monkeypatch)
         "pipx upgrade mainbranch" in action for action in payload["readiness"]["next_actions"]
     )
 
-    human_result = runner.invoke(app, ["status", str(repo)])
+    human_result = runner.invoke(app, ["status", str(repo), "--verbose"])
 
     assert human_result.exit_code == 0
     assert "Update required." in human_result.stdout
@@ -119,15 +244,45 @@ def test_status_names_integration_repairs(tmp_path: Path, monkeypatch) -> None:
     assert json_result.exit_code == 0
     payload = json.loads(json_result.stdout)
     assert payload["integrations"]["providers"][0]["state"] == "missing_secret"
+    assert any(item["id"] == "unhealthy_integrations" for item in payload["drift"]["items"])
     assert any(
         "mb connect meta --token-stdin" in action for action in payload["readiness"]["next_actions"]
     )
 
-    human_result = runner.invoke(app, ["status", str(repo)])
+    human_result = runner.invoke(app, ["status", str(repo), "--verbose"])
 
     assert human_result.exit_code == 0
     assert "meta: missing_secret" in human_result.stdout
     assert "mb connect meta --token-stdin" in human_result.stdout
+
+
+def test_status_drift_aligns_unhealthy_integrations_with_readiness(
+    tmp_path: Path, monkeypatch
+) -> None:
+    monkeypatch.setattr(status_mod, "_which", _without_github_or_claude)
+    repo = tmp_path / "acme"
+    init_run(path=str(repo), name="Acme")
+    provider = {
+        "provider": "meta",
+        "ok": False,
+        "connected": False,
+        "state": "unvalidated",
+        "repair_command": "mb connect test meta",
+    }
+    report = status_mod.run(path=str(repo), update_marker=False)
+    report["integrations"]["providers"] = [provider]
+    report["integrations"]["summary"] = {
+        "configured": 1,
+        "healthy": 0,
+        "needs_repair": 1,
+        "unvalidated": 1,
+    }
+
+    drift = status_mod._drift(report)
+    readiness = status_mod._readiness(report)
+
+    assert any(item["id"] == "unhealthy_integrations" for item in drift["items"])
+    assert any("mb connect test meta" in action for action in readiness["next_actions"])
 
 
 def test_status_detects_non_business_repo(tmp_path: Path, monkeypatch) -> None:
@@ -248,13 +403,18 @@ def test_status_brain_marks_stale_decisions(tmp_path: Path, monkeypatch) -> None
         encoding="utf-8",
     )
     (repo / "research").mkdir()
-    (repo / "research" / "2026-05-01-market.md").write_text("# Market\n", encoding="utf-8")
+    old_research_date = date.today().replace(year=date.today().year - 1)
+    (repo / "research" / f"{old_research_date.isoformat()}-market.md").write_text(
+        f"---\ndate: {old_research_date.isoformat()}\n---\n\n# Market\n",
+        encoding="utf-8",
+    )
 
     brain = status_mod._brain(repo)
 
     assert brain["recent_decisions"][0]["title"] == "Old proposal"
     assert brain["stale_decisions"][0]["age_days"] > status_mod.STALE_DECISION_DAYS
     assert brain["recent_research"][0]["title"] == "Market"
+    assert brain["stale_research"][0]["age_days"] > status_mod.STALE_RESEARCH_DAYS
 
 
 def test_status_github_authenticated_branches(tmp_path: Path, monkeypatch) -> None:
@@ -535,7 +695,7 @@ def test_status_renderer_prints_optional_sections(capsys) -> None:
         "readiness": {"level": "ready", "score": 100, "next_actions": ["Run `claude`."]},
     }
 
-    status_mod.render_human(report)
+    status_mod.render_human(report, verbose=True, no_color=True)
 
     output = capsys.readouterr().out
     assert "Recent decisions" in output
