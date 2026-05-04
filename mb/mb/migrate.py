@@ -17,6 +17,7 @@ ENVELOPE_SCHEMA_VERSION = 1
 LATEST_SCHEMA_VERSION = "0.2"
 SCHEMA_MARKER = ".mb/schema_version"
 BACKUPS_GITIGNORE_ENTRY = ".mb/backups/"
+IGNORED_OS_METADATA_FILES = {".DS_Store", "Thumbs.db", "Desktop.ini"}
 
 
 class MigrationApplyError(RuntimeError):
@@ -193,7 +194,7 @@ def status(repo: str | Path = ".") -> dict[str, Any]:
     return _base_envelope(target, "status")
 
 
-def check(repo: str | Path = ".") -> dict[str, Any]:
+def check(repo: str | Path = ".", *, include_diff: bool = False) -> dict[str, Any]:
     """Plan pending migrations without writing files."""
     target = Path(repo).resolve()
     result = _base_envelope(target, "check")
@@ -205,7 +206,13 @@ def check(repo: str | Path = ".") -> dict[str, Any]:
     result["plan"] = {
         "has_changes": any(plan.has_changes for plan in plans),
         "migrations": [_plan_dict(plan) for plan in plans],
-        "diff": _unified_diff(target, plans, include_marker=bool(pending)),
+        "diff_included": include_diff,
+        "diff": _unified_diff(target, plans, include_marker=bool(pending)) if include_diff else "",
+        "privacy_note": (
+            "Full file diffs are hidden by default because legacy business repos "
+            "can contain private strategy, proof, and offer details. Re-run with "
+            "`--diff` only when the output will stay local."
+        ),
         "errors": errors,
     }
     result["errors"] = errors
@@ -224,6 +231,25 @@ def _gitignore_content_with_backups(text: str) -> str:
         return text
     prefix = text if text.endswith("\n") or not text else text + "\n"
     return prefix + BACKUPS_GITIGNORE_ENTRY + "\n"
+
+
+def _is_os_metadata_file(path: Path) -> bool:
+    return path.name in IGNORED_OS_METADATA_FILES or path.name.startswith("._")
+
+
+def _remove_ignored_metadata_tree(path: Path) -> None:
+    if not path.is_dir():
+        return
+    for child in path.rglob("*"):
+        if child.is_file() and not child.is_symlink() and _is_os_metadata_file(child):
+            child.unlink()
+    for child in sorted(
+        (item for item in path.rglob("*") if item.is_dir()),
+        key=lambda item: len(item.parts),
+        reverse=True,
+    ):
+        if not any(child.iterdir()):
+            child.rmdir()
 
 
 def _ensure_gitignore_plan(repo: Path, plans: list[MigrationPlan]) -> None:
@@ -286,9 +312,13 @@ def _apply_change(repo: Path, change: PlannedChange) -> None:
         path.write_text(change.content, encoding="utf-8")
         return
     if change.kind == "remove_empty_dir":
-        if path.is_dir() and not any(path.iterdir()):
-            path.rmdir()
-        elif path.exists():
+        if path.is_dir():
+            _remove_ignored_metadata_tree(path)
+            if not any(path.iterdir()):
+                path.rmdir()
+                return
+            raise MigrationApplyError(f"{change.path} is not empty; aborting before replacement")
+        if path.exists():
             raise MigrationApplyError(f"{change.path} is not empty; aborting before replacement")
         return
     if change.kind == "symlink":
@@ -302,7 +332,7 @@ def _apply_change(repo: Path, change: PlannedChange) -> None:
 def apply(repo: str | Path = ".") -> dict[str, Any]:
     """Apply pending migrations after creating a repo-local backup."""
     target = Path(repo).resolve()
-    result = check(target)
+    result = check(target, include_diff=False)
     result["action"] = "apply"
     plans = [
         migrations.plan_for(info, module, target) for info, module in pending_migrations(target)
@@ -366,6 +396,19 @@ def render_check(result: dict[str, Any]) -> None:
     diff = str(plan.get("diff", ""))
     if diff:
         print(diff, end="")
+    elif plan.get("has_changes"):
+        print("pending migration changes:")
+        for migration in plan.get("migrations", []):
+            info = migration["migration"]
+            print(f"  {info['id']} {info['name']} ({info['from_version']} -> {info['to_version']})")
+            for change in migration.get("changes", []):
+                detail = change.get("path") or change.get("target") or change.get("source")
+                if change.get("kind") == "move_file":
+                    detail = f"{change.get('source')} -> {change.get('target')}"
+                print(f"    - {change.get('kind')}: {detail}")
+        print()
+        print(plan.get("privacy_note", "Full diffs are hidden by default."))
+        print("Run `mb migrate --check --diff` to print the full unified diff locally.")
     else:
         print("no migrations pending")
 

@@ -1,0 +1,167 @@
+# Auto-Heal: Bridge Link Recovery
+
+When a user launches Claude in their business repo and skills aren't showing, this file provides the self-repair logic. It's readable via `additionalDirectories` file access even when skills aren't discoverable.
+
+---
+
+## When This Runs
+
+This runs in two places:
+
+1. **Bootstrap path:** business repo `CLAUDE.md` points here when `/mb-start` is missing.
+2. **Main `/mb-start` path:** when `/mb-start` is invoked from vip, it resolves a selected business repo and runs this repair against that repo.
+
+---
+
+## Step 0: Set target repo
+
+Always target the business repo explicitly:
+
+```bash
+REPO_PATH="[absolute-path-to-business-repo]"
+test -d "$REPO_PATH" || echo "BAD_REPO_PATH"
+```
+
+If running directly inside the business repo, set:
+
+```bash
+REPO_PATH="$PWD"
+```
+
+---
+
+## Step 1: Find engine path
+
+If the `mb` CLI exists, prefer the packaged repair path. It handles pipx
+installs and clone-based installs, writes `settings.local.json`, creates
+bridge links, and updates `.gitignore`:
+
+```bash
+if command -v mb >/dev/null 2>&1; then
+  mb skill link --repo "$REPO_PATH"
+fi
+```
+
+Then verify Step 3. If it passes, skip the manual symlink loop below.
+
+```bash
+ENGINE_PATH=$(REPO_PATH="$REPO_PATH" python3 -c "
+import json, os
+with open(os.path.join(os.environ['REPO_PATH'], '.claude/settings.local.json')) as f:
+    dirs = json.load(f).get('permissions', {}).get('additionalDirectories', [])
+for d in dirs:
+    if os.path.isfile(os.path.join(d, '.claude/skills/mb-start/SKILL.md')):
+        print(d); break
+" 2>/dev/null)
+echo "ENGINE_PATH=$ENGINE_PATH"
+```
+
+If empty: `settings.local.json` is missing or doesn't point to Main Branch. Tell the user to run `mb skill link --repo "$REPO_PATH"` if the CLI is installed, or manually create `REPO_PATH/.claude/settings.local.json`:
+
+```json
+{
+  "permissions": {
+    "additionalDirectories": ["/absolute/path/to/mainbranch"]
+  }
+}
+```
+
+---
+
+## Step 2: Create bridge links
+
+```bash
+mkdir -p "$REPO_PATH/.claude/skills" "$REPO_PATH/.claude/lenses" "$REPO_PATH/.claude/reference"
+
+# Per-skill symlinks (preserves local custom skills)
+for d in "$ENGINE_PATH"/.claude/skills/*/; do
+  [ -d "$d" ] || continue
+  n=$(basename "$d")
+  [ -e "$REPO_PATH/.claude/skills/$n" ] || ln -s "$d" "$REPO_PATH/.claude/skills/$n"
+done
+
+# Per-entry lenses and reference
+for p in "$ENGINE_PATH"/.claude/lenses/* "$ENGINE_PATH"/.claude/reference/*; do
+  [ -e "$p" ] || continue
+  base=$(basename "$p")
+  parent=$(basename "$(dirname "$p")")
+  [ -e "$REPO_PATH/.claude/$parent/$base" ] || ln -s "$p" "$REPO_PATH/.claude/$parent/$base"
+done
+```
+
+---
+
+## Step 2.5: Update .gitignore
+
+Bridge links are machine-local symlinks — they must not be committed. After creating links, ensure `.gitignore` covers them.
+
+```bash
+GITIGNORE="$REPO_PATH/.gitignore"
+
+# Add marker + entries if not already present
+if ! grep -q "MAIN BRANCH BRIDGE LINKS" "$GITIGNORE" 2>/dev/null; then
+  cat >> "$GITIGNORE" << 'GITIGNORE_BLOCK'
+
+# === MAIN BRANCH BRIDGE LINKS (machine-local, do not commit) ===
+.claude/lenses/
+.claude/reference/
+GITIGNORE_BLOCK
+
+  # Add each Main Branch skill symlink individually (preserves custom skill tracking)
+  for d in "$ENGINE_PATH"/.claude/skills/*/; do
+    [ -d "$d" ] || continue
+    n=$(basename "$d")
+    echo ".claude/skills/$n" >> "$GITIGNORE"
+  done
+fi
+```
+
+**Why per-skill entries (not `.claude/skills/`):** Users have custom skills (deck, pr-review, etc.) that ARE tracked. Ignoring the whole folder would hide those. We only ignore the Main Branch-linked ones.
+
+**Idempotent:** The marker check (`MAIN BRANCH BRIDGE LINKS`) prevents duplicate entries on repeated heals.
+
+---
+
+## Step 3: Verify
+
+```bash
+test -e "$REPO_PATH/.claude/skills/mb-start" && echo "HEAL_OK" || echo "HEAL_FAILED"
+```
+
+---
+
+## Step 4: Tell the user
+
+If HEAL_OK:
+> "I've set up the skill bridge links. **Please restart Claude** (Ctrl+C, then `claude`) — skills like `/mb-start` will appear in the dropdown on next launch."
+
+If HEAL_FAILED:
+> "Auto-repair failed. If you installed with pipx, run `pipx upgrade mainbranch` and `mb skill link --repo .`. If you cloned the engine, check that the path in `.claude/settings.local.json` is correct."
+
+---
+
+## Why this is needed
+
+`additionalDirectories` in `settings.local.json` grants file access to Main Branch but doesn't reliably trigger skill discovery in Claude Code v2.1.39. Bridge links (symlinks from `.claude/skills/[name]` to Main Branch skill directories) make Claude discover skills as if they're local. This is a compatibility layer — if Anthropic fixes discovery from additional directories, these links become redundant but harmless.
+
+---
+
+## What the links look like
+
+```
+business-repo/.claude/
+├── settings.local.json                              # Real file (canonical)
+├── skills/                                          # Real directory
+│   ├── mb-start -> /path/to/mainbranch/.claude/skills/mb-start  # Symlink (bridge)
+│   ├── mb-ads -> /path/to/mainbranch/.claude/skills/mb-ads      # Symlink (bridge)
+│   ├── my-local-skill/                              # Real dir (preserved)
+│   └── ...
+├── lenses/                                          # Real directory
+│   ├── ftc-compliance.md -> /path/to/mainbranch/... # Symlink (bridge)
+│   └── ...
+└── reference/                                       # Real directory
+    ├── compliance -> /path/to/mainbranch/...        # Symlink (bridge)
+    └── ...
+```
+
+Local custom skills are never overwritten — the `[ -e ] || ln -s` guard skips anything that already exists.

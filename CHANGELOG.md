@@ -13,6 +13,23 @@ PyPI distribution `mainbranch` tracks the same version sequence.
 
 ### Added
 
+- `mb skill repair --repo .` detects personal Claude Code skills that shadow
+  Main Branch's project-local wiring, reports each entry's resolved target, and
+  moves only provably stale Main Branch symlinks to a timestamped backup when
+  run with `--apply`.
+- Bundled Claude Code skills now use collision-resistant `mb-` names such as
+  `/mb-start`, `/mb-think`, `/mb-ads`, and `/mb-pull`; fresh business repos only
+  wire the prefixed names.
+- Bundled skill validation now fails if an engine-bundled skill lacks the
+  `mb-` vendor prefix, so `scripts/check.sh` and CI catch future regressions.
+- Added a Claude Code plugin prototype manifest at `.claude-plugin/plugin.json`
+  with the `mainbranch` namespace and the current `.claude/skills/` payload.
+  This does not replace `mb skill link` yet; runtime smoke still decides when
+  plugin packaging becomes default.
+- `mb migrate --check` now defaults to a privacy-safe path/action summary;
+  use `--diff` explicitly to print full unified diffs that may include private
+  legacy business content. JSON output also omits full diff text unless
+  `--diff` is present.
 - Added `mb connect test <provider>` and `mb connect doctor` so users and
   onboarding agents can distinguish missing, unvalidated, invalid, and ready
   provider credentials without printing secret values or raw provider
@@ -35,6 +52,13 @@ PyPI distribution `mainbranch` tracks the same version sequence.
 
 ### Changed
 
+- `mb migrate --repo <repo> status` now honors the root `--repo` option, matching
+  `mb migrate status --repo <repo>`.
+- `mb skill link --repo .` removes stale Main Branch/VIP-era engine paths from
+  `.claude/settings.local.json` when it rewrites the active engine path.
+- Bundled migration/setup copy now routes old users through `mb skill link`,
+  `mb skill repair`, `mb doctor`, and `mb start --json` instead of old clone-era
+  manual setup instructions.
 - `mb connect status --json`, `mb doctor`, and `mb status` no longer treat a
   stored secret ref as provider health. Stored credentials report
   `unvalidated` until `mb connect test <provider>` succeeds, and repair output
@@ -45,6 +69,14 @@ PyPI distribution `mainbranch` tracks the same version sequence.
 - GitHub integration health now distinguishes missing `gh`, unauthenticated
   `gh`, missing GitHub remotes, non-git folders, and ready GitHub repo context
   in secret-safe status and doctor output.
+
+### Fixed
+
+- v0.1-to-v0.2 path migration now ignores local OS metadata such as `.DS_Store`,
+  `Thumbs.db`, `Desktop.ini`, and AppleDouble `._*` files.
+- `mb validate` now adds a legacy frontmatter repair explanation after migrated
+  repos fail current schema checks, distinguishing content-schema debt from
+  layout migration failure.
 
 ## [0.2.3] - 2026-05-03
 
