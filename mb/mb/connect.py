@@ -64,11 +64,13 @@ PROVIDERS: tuple[Provider, ...] = (
         id="meta",
         name="Meta",
         category="ads",
-        auth="access_token",
-        required_secrets=("access_token",),
+        auth="meta_cli_pending",
+        required_secrets=(),
         metadata_fields=("ad_account_id", "business_id"),
-        description="Meta ads accounts, campaign review, and future performance sync.",
-        env_vars=("META_ACCESS_TOKEN",),
+        description=(
+            "Meta Ads account access through Meta's official Ads CLI, pending "
+            "Main Branch detection and smoke."
+        ),
     ),
     Provider(
         id="cloudflare",
@@ -146,7 +148,7 @@ PROVIDER_GUIDANCE: dict[str, dict[str, Any]] = {
             "Use when the business needs a landing page, custom domain, deploy, or DNS check."
         ),
         "defer_when": "Defer until you are ready to publish or connect a domain.",
-        "status_command": "mb connect status --all --json",
+        "status_command": "mb connect doctor --json",
     },
     "google": {
         "priority": 3,
@@ -161,20 +163,23 @@ PROVIDER_GUIDANCE: dict[str, dict[str, Any]] = {
             "Do not connect it just because a Google account exists; connect it when "
             "a workflow needs it."
         ),
-        "status_command": "mb connect status --all --json",
+        "status_command": "mb connect doctor --json",
     },
     "meta": {
         "priority": 4,
         "why": (
-            "Meta Ads readiness lets ad workflows reason about ad accounts, campaigns, and pixels."
+            "Meta Ads readiness will let ad workflows reason about ad accounts, campaigns, "
+            "and pixels through Meta's official Ads CLI path."
         ),
         "use_when": (
-            "Use when the business is generating, reviewing, or learning from Meta/Facebook ads."
+            "Use when the business is generating, reviewing, or learning from Meta/Facebook ads. "
+            "For now, treat live account access as planned until Main Branch detection "
+            "and read-only smoke are wired."
         ),
         "defer_when": (
             "Defer for organic, research, or site work that does not need ad-account facts."
         ),
-        "status_command": "mb connect status --all --json",
+        "status_command": "mb connect doctor --json",
     },
     "apify": {
         "priority": 5,
@@ -186,7 +191,7 @@ PROVIDER_GUIDANCE: dict[str, dict[str, Any]] = {
             "Use when research or organic workflows need structured external data collection."
         ),
         "defer_when": "Defer for first-pass reference setup or local-only thinking.",
-        "status_command": "mb connect status --all --json",
+        "status_command": "mb connect doctor --json",
     },
 }
 
@@ -285,6 +290,16 @@ def _secret_ref(repo_id: str, provider_id: str, field: str) -> str:
 
 
 def _repair(provider: Provider, state: str, missing: list[str] | None = None) -> dict[str, str]:
+    if provider.id == "meta":
+        return {
+            "summary": ("Meta Ads CLI support is planned but not wired in this mb release."),
+            "repair": (
+                "Use reference-file ad workflows for now. Do not add third-party "
+                "Meta MCP or access-token setup as a fallback; wait for the "
+                "official Meta Ads CLI detection/read-only smoke to land."
+            ),
+            "repair_command": "",
+        }
     missing_fields = ", ".join(missing or provider.required_secrets)
     connect_command = f"mb connect {provider.id} --token-stdin"
     if state == "not_connected":
@@ -495,6 +510,11 @@ def connect_provider(
     """Connect a provider by writing repo metadata and local secrets."""
 
     provider = normalize_provider(provider_id)
+    if provider.id == "meta":
+        raise ValueError(
+            "Meta Ads CLI support is planned but not wired in this mb release; "
+            "run `mb connect plan` or `mb educational provider-readiness`."
+        )
     target = Path(repo).resolve()
     config = _read_config(target)
     repo_id = _ensure_repo_id(config)
@@ -544,6 +564,38 @@ def status_provider(provider_id: str, repo: str | Path = ".") -> dict[str, Any]:
     target = Path(repo).resolve()
     config = _read_config(target)
     entry = config["providers"].get(provider.id)
+    if provider.id == "meta":
+        raw_entry = entry if isinstance(entry, dict) else {}
+        raw_meta_metadata = raw_entry.get("metadata")
+        meta_metadata: dict[str, Any] = (
+            raw_meta_metadata if isinstance(raw_meta_metadata, dict) else {}
+        )
+        raw_meta_validation = raw_entry.get("validation")
+        meta_validation: dict[str, Any] = (
+            raw_meta_validation if isinstance(raw_meta_validation, dict) else {}
+        )
+        repair = _repair(provider, "planned")
+        return {
+            "provider": provider.id,
+            "name": provider.name,
+            "connected": False,
+            "ok": False,
+            "state": "planned",
+            "summary": repair["summary"],
+            "repair": repair["repair"],
+            "repair_command": repair["repair_command"],
+            "safe_to_share": True,
+            "account_label": str(raw_entry.get("account_label") or ""),
+            "metadata": meta_metadata,
+            "secrets": {},
+            "last_checked_at": str(raw_entry.get("last_checked_at") or ""),
+            "validation": {
+                "state": str(meta_validation.get("state") or "planned"),
+                "checked_at": str(meta_validation.get("checked_at") or ""),
+                "summary": str(meta_validation.get("summary") or repair["summary"]),
+                "safe_to_share": True,
+            },
+        }
     if not isinstance(entry, dict):
         repair = _repair(provider, "not_connected")
         return {
@@ -664,11 +716,6 @@ def _validate_with_provider(provider: Provider, secret: str) -> dict[str, Any]:
             "https://api.cloudflare.com/client/v4/user/tokens/verify",
             {"Authorization": f"Bearer {secret}"},
         )
-    elif provider.id == "meta":
-        state, summary = _http_get_json(
-            "https://graph.facebook.com/v19.0/me?fields=id",
-            {"Authorization": f"Bearer {secret}"},
-        )
     elif provider.id == "apify":
         state, summary = _http_get_json(
             "https://api.apify.com/v2/users/me",
@@ -700,6 +747,8 @@ def test_provider(provider_id: str, repo: str | Path = ".") -> dict[str, Any]:
     config = _read_config(target)
     entry = config["providers"].get(provider.id)
     status = status_provider(provider.id, target)
+    if provider.id == "meta":
+        return {"ok": False, "provider": provider.id, "status": status, "safe_to_share": True}
     if not isinstance(entry, dict) or status["state"] in {"not_connected", "missing_secret"}:
         return {"ok": False, "provider": provider.id, "status": status, "safe_to_share": True}
 
@@ -916,7 +965,14 @@ def provider_plan(repo: str | Path = ".") -> dict[str, Any]:
                 "use_when": guidance["use_when"],
                 "defer_when": guidance["defer_when"],
                 "status_command": guidance["status_command"],
-                "next_command": item["repair_command"] or f"mb connect test {provider_id}",
+                "next_command": (
+                    item["repair_command"]
+                    or (
+                        "mb educational provider-readiness"
+                        if item["state"] == "planned"
+                        else f"mb connect test {provider_id}"
+                    )
+                ),
                 "safe_to_share": bool(item.get("safe_to_share", True)),
             }
         )

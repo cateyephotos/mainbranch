@@ -49,11 +49,13 @@ def test_connect_list_json_does_not_create_repo_metadata(tmp_path: Path) -> None
     assert result.exit_code == 0
     payload = json.loads(result.stdout)
     assert any(provider["id"] == "cloudflare" for provider in payload["providers"])
+    meta = next(provider for provider in payload["providers"] if provider["id"] == "meta")
+    assert meta["auth"] == "meta_cli_pending"
     cloudflare = next(
         provider for provider in payload["providers"] if provider["id"] == "cloudflare"
     )
     assert "low-lock-in rail" in cloudflare["why"]
-    assert cloudflare["status_command"] == "mb connect status --all --json"
+    assert cloudflare["status_command"] == "mb connect doctor --json"
     assert not (repo / ".mb" / "connect.yaml").exists()
 
 
@@ -78,9 +80,62 @@ def test_connect_plan_returns_numbered_provider_choices(tmp_path: Path, monkeypa
     assert list(steps) == ["github", "cloudflare", "google", "meta", "apify"]
     assert steps["github"]["next_command"] == "gh auth login"
     assert steps["github"]["safe_to_share"] is True
-    assert steps["meta"]["next_command"] == "mb connect meta --token-stdin"
+    assert steps["meta"]["state"] == "planned"
+    assert steps["meta"]["next_command"] == "mb educational provider-readiness"
     assert payload["summary"]["total"] == 5
     assert not (repo / ".mb" / "connect.yaml").exists()
+
+
+def test_connect_meta_is_planned_and_does_not_write_metadata(tmp_path: Path) -> None:
+    repo = tmp_path / "biz"
+    repo.mkdir()
+
+    result = runner.invoke(app, ["connect", "meta", "--repo", str(repo), "--json"])
+
+    assert result.exit_code == 2
+    assert "Meta Ads CLI support is planned" in result.stderr
+    assert not (repo / ".mb" / "connect.yaml").exists()
+
+
+def test_meta_status_remains_planned_even_with_stale_metadata(tmp_path: Path) -> None:
+    repo = tmp_path / "biz"
+    repo.mkdir()
+    config_path = repo / ".mb" / "connect.yaml"
+    config_path.parent.mkdir()
+    config_path.write_text(
+        yaml.safe_dump(
+            {
+                "version": 1,
+                "repo_id": "repo",
+                "providers": {
+                    "meta": {
+                        "provider": "meta",
+                        "connected": True,
+                        "account_label": "Old Meta",
+                        "metadata": {"ad_account_id": "act_123"},
+                    }
+                },
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    status = connect_mod.status_provider("meta", repo)
+
+    assert status["state"] == "planned"
+    assert status["connected"] is False
+    assert status["repair_command"] == ""
+    assert status["metadata"] == {"ad_account_id": "act_123"}
+
+    aggregate = connect_mod.status_all(repo)
+    assert aggregate["ok"] is True
+    assert aggregate["summary"]["configured"] == 0
+    assert aggregate["summary"]["needs_repair"] == 0
+    assert aggregate["providers"][0]["state"] == "planned"
+
+    check = connect_mod.doctor_check(repo, status=aggregate)
+    assert check["ok"] is True
+    assert check["detail"] == "no providers connected"
 
 
 def test_connect_plan_human_output_uses_numbered_choices(tmp_path: Path, monkeypatch) -> None:
@@ -151,11 +206,11 @@ def test_connect_provider_stores_secret_outside_repo(tmp_path: Path, monkeypatch
 
 def test_connect_provider_only_reads_env_when_explicit(tmp_path: Path, monkeypatch) -> None:
     _local_secret_env(monkeypatch, tmp_path)
-    monkeypatch.setenv("META_ACCESS_TOKEN", "meta-test-token")
+    monkeypatch.setenv("APIFY_TOKEN", "apify-test-token")
     repo = tmp_path / "biz"
     repo.mkdir()
 
-    implicit = runner.invoke(app, ["connect", "meta", "--repo", str(repo), "--json"])
+    implicit = runner.invoke(app, ["connect", "apify", "--repo", str(repo), "--json"])
 
     assert implicit.exit_code == 1
     implicit_payload = json.loads(implicit.stdout)
@@ -163,17 +218,17 @@ def test_connect_provider_only_reads_env_when_explicit(tmp_path: Path, monkeypat
 
     explicit = runner.invoke(
         app,
-        ["connect", "meta", "--repo", str(repo), "--from-env", "--json"],
+        ["connect", "apify", "--repo", str(repo), "--from-env", "--json"],
     )
 
     assert explicit.exit_code == 0
     explicit_payload = json.loads(explicit.stdout)
     assert explicit_payload["credential_source"] == {
         "type": "env",
-        "env_var": "META_ACCESS_TOKEN",
+        "env_var": "APIFY_TOKEN",
     }
     assert explicit_payload["status"]["state"] == "unvalidated"
-    assert "meta-test-token" not in (repo / ".mb" / "connect.yaml").read_text(encoding="utf-8")
+    assert "apify-test-token" not in (repo / ".mb" / "connect.yaml").read_text(encoding="utf-8")
 
 
 def test_connect_status_reports_missing_secret_as_repair_not_hard_crash(
@@ -183,7 +238,7 @@ def test_connect_status_reports_missing_secret_as_repair_not_hard_crash(
     repo = tmp_path / "biz"
     repo.mkdir()
 
-    result = runner.invoke(app, ["connect", "meta", "--repo", str(repo), "--json"])
+    result = runner.invoke(app, ["connect", "cloudflare", "--repo", str(repo), "--json"])
 
     assert result.exit_code == 1
     payload = json.loads(result.stdout)
@@ -193,9 +248,9 @@ def test_connect_status_reports_missing_secret_as_repair_not_hard_crash(
     assert status.exit_code == 1
     status_payload = json.loads(status.stdout)
     assert status_payload["summary"]["needs_repair"] == 1
-    assert status_payload["providers"][0]["secrets"]["access_token"]["present"] is False
+    assert status_payload["providers"][0]["secrets"]["api_token"]["present"] is False
     assert status_payload["providers"][0]["state"] == "missing_secret"
-    assert status_payload["providers"][0]["repair_command"] == "mb connect meta --token-stdin"
+    assert status_payload["providers"][0]["repair_command"] == "mb connect cloudflare --token-stdin"
     assert status_payload["providers"][0]["safe_to_share"] is True
 
 
@@ -327,7 +382,7 @@ def test_connect_doctor_includes_github_context_and_provider_repairs(
     _local_secret_env(monkeypatch, tmp_path)
     repo = tmp_path / "biz"
     repo.mkdir()
-    runner.invoke(app, ["connect", "meta", "--repo", str(repo), "--json"])
+    runner.invoke(app, ["connect", "cloudflare", "--repo", str(repo), "--json"])
     monkeypatch.setattr(connect_mod.shutil, "which", lambda name: "")
 
     result = runner.invoke(app, ["connect", "doctor", "--repo", str(repo), "--json"])
@@ -336,8 +391,8 @@ def test_connect_doctor_includes_github_context_and_provider_repairs(
     payload = json.loads(result.stdout)
     checks = {check["name"]: check for check in payload["checks"]}
     assert checks["github-context"]["state"] == "missing_cli"
-    assert checks["provider:meta"]["state"] == "missing_secret"
-    assert checks["provider:meta"]["repair_command"] == "mb connect meta --token-stdin"
+    assert checks["provider:cloudflare"]["state"] == "missing_secret"
+    assert checks["provider:cloudflare"]["repair_command"] == "mb connect cloudflare --token-stdin"
     assert payload["safe_to_share"] is True
 
 

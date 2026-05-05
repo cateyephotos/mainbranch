@@ -247,7 +247,7 @@ def test_status_names_integration_repairs(tmp_path: Path, monkeypatch) -> None:
     monkeypatch.setenv("MAINBRANCH_HOME", str(tmp_path / "home"))
     repo = tmp_path / "acme"
     init_run(path=str(repo), name="Acme")
-    connect_mod.connect_provider("meta", repo=repo)
+    connect_mod.connect_provider("cloudflare", repo=repo)
 
     json_result = runner.invoke(app, ["status", str(repo), "--json"])
 
@@ -256,7 +256,8 @@ def test_status_names_integration_repairs(tmp_path: Path, monkeypatch) -> None:
     assert payload["integrations"]["providers"][0]["state"] == "missing_secret"
     assert any(item["id"] == "unhealthy_integrations" for item in payload["drift"]["items"])
     assert any(
-        "mb connect meta --token-stdin" in action for action in payload["readiness"]["next_actions"]
+        "mb connect cloudflare --token-stdin" in action
+        for action in payload["readiness"]["next_actions"]
     )
     assert any(
         action["id"] == "repair_unhealthy_integrations" for action in payload["ranked_actions"]
@@ -265,8 +266,8 @@ def test_status_names_integration_repairs(tmp_path: Path, monkeypatch) -> None:
     human_result = runner.invoke(app, ["status", str(repo), "--verbose"])
 
     assert human_result.exit_code == 0
-    assert "meta: missing_secret" in human_result.stdout
-    assert "mb connect meta --token-stdin" in human_result.stdout
+    assert "cloudflare: missing_secret" in human_result.stdout
+    assert "mb connect cloudflare --token-stdin" in human_result.stdout
 
 
 def test_status_drift_aligns_unhealthy_integrations_with_readiness(
@@ -276,11 +277,11 @@ def test_status_drift_aligns_unhealthy_integrations_with_readiness(
     repo = tmp_path / "acme"
     init_run(path=str(repo), name="Acme")
     provider = {
-        "provider": "meta",
+        "provider": "cloudflare",
         "ok": False,
-        "connected": False,
+        "connected": True,
         "state": "unvalidated",
-        "repair_command": "mb connect test meta",
+        "repair_command": "mb connect test cloudflare",
     }
     report = status_mod.run(path=str(repo), update_marker=False)
     report["integrations"]["providers"] = [provider]
@@ -295,7 +296,7 @@ def test_status_drift_aligns_unhealthy_integrations_with_readiness(
     readiness = status_mod._readiness(report)
 
     assert any(item["id"] == "unhealthy_integrations" for item in drift["items"])
-    assert any("mb connect test meta" in action for action in readiness["next_actions"])
+    assert any("mb connect test cloudflare" in action for action in readiness["next_actions"])
 
 
 def test_status_detects_non_business_repo(tmp_path: Path, monkeypatch) -> None:
