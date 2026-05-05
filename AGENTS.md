@@ -175,8 +175,8 @@ Prefer one coherent user loop per branch. Do not broaden scope silently. If you
 find adjacent work, open or comment on a follow-up issue instead of burying it in
 the current PR.
 
-Name which operator loop the branch improves: Know, See, Decide, Execute, or
-Narrate. Use `docs/OPERATOR-LOOPS.md` when the fit is unclear.
+Name which operator loop the branch improves: Sense, Decide, Ship, or
+Reflect. Use `docs/OPERATOR-LOOPS.md` when the fit is unclear.
 
 Good issue slices look like:
 
@@ -357,6 +357,36 @@ When changing `.claude/skills/<name>/`:
 
 Mechanical Python tests do not prove LLM-facing skill behavior. If the prose or
 workflow changed, include a runtime/manual validation note.
+
+### SKILL.md frontmatter — `loops:` field
+
+Every `SKILL.md` should declare which operator loops it traverses. The
+operator-loop taxonomy lives in [docs/OPERATOR-LOOPS.md](docs/OPERATOR-LOOPS.md):
+`sense`, `decide`, `ship`, `reflect`. A skill is a journey across loops; loops
+are stations the skill passes through.
+
+```yaml
+---
+name: mb-bet
+description: Open, update, close, list, and narrate Main Branch business bets.
+loops: [decide, reflect, ship]
+---
+```
+
+Rules:
+
+- Skills can span 1+ loops. Most useful skills span 2-3 (for example,
+  `/mb-think` is `[sense, decide, ship]` because it researches, decides, and
+  codifies the decision into a file).
+- Skill names do not have to mirror loop names. `/mb-think` is a brand-name
+  multi-loop skill, not a "Think loop" claim.
+- Only the four canonical loop slugs are valid (`sense`, `decide`, `ship`,
+  `reflect`). Channels (Paid, Organic, Pages, Ops) are not loops and do not
+  belong in this field.
+- The convention is forward-looking: no bundled skill declares `loops:` yet
+  and no `mb` code parses it today. As `mb status` loop grouping, the future
+  dashboard, and the bets feed land, they will read this field. Declare it
+  on new skills so the tooling has clean inputs to consume when it ships.
 
 ## State Model
 
