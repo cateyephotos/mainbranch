@@ -1,6 +1,7 @@
 ---
 name: mb-think
 description: "Combined research, decision, and codification workflow. Use when: (1) Exploring a question before committing (2) Making a decision that needs documentation (3) User says research, decide, figure out, explore, codify, enrich, add context (4) Updating reference files based on decisions (5) User wants to add new testimonials, angles, or proof to existing files. Supports modes: full flow, research-only, decide-only, codify."
+loops: [sense, decide, ship]
 ---
 
 # Think
@@ -21,13 +22,11 @@ Something came your way — a video, a voice memo, a vague feeling, a problem to
 - Switching focus
 - Anytime you feel lost
 
-**Save checkpoints at natural boundaries.** After a research batch, accepted
-decision, codify pass, or major reference-file update, run
-`mb checkpoint --plan --json`. If the plan is ready, ask whether to save a
-checkpoint before moving to the next phase. If approved, run
-`mb checkpoint --message "[checkpoint] <plain business summary>" --yes`. If the
-plan is blocked, explain the safety block and do not work around it with raw
-git.
+**Save progress at natural boundaries.** After a research batch, accepted
+decision, codify pass, or major reference-file update, ask whether to save a
+checkpoint before moving to the next phase. Use the current repo's git workflow
+with explicit operator approval. When the v0.3.x checkpoint contract ships,
+this step should move to deterministic checkpoint plan/status facts.
 
 ---
 
@@ -52,11 +51,23 @@ See **[references/pull-engine-updates.md](references/pull-engine-updates.md)** f
 
 ---
 
-## Tool Detection (Config-First)
+## Tool Detection (CLI Facts First)
 
-Tool status persists in `.vip/config.yaml` under `tools:`. Read config first, only probe unknowns, always write results back.
+Provider readiness comes from `mb` first. Run or reuse:
 
-**Quick gist:** On first /mb-think invocation each session, read `tools` from config, re-probe unknowns or stale-false entries, write results back immediately, report once at experience-appropriate verbosity. Surface a tool option to the user only when their intent needs it and it's missing — once per session per tool.
+```bash
+mb status --json --peek
+mb connect doctor --json
+```
+
+Use those facts for GitHub, Google/Workspace, Meta Ads, Apify, and other
+provider repair language. Runtime-local tool checks happen only after a
+selected research path needs them and `mb` cannot inspect the tool directly.
+
+**Quick gist:** On first `/mb-think` invocation, read status/connect facts. When
+the user's intent needs a runtime-local tool, check only that tool, cache
+session knowledge, and offer the `mb connect` repair command or a fallback.
+Surface a missing-tool option once per session per tool.
 
 See **[references/tool-detection.md](references/tool-detection.md)** for the full status-value table, staleness rules, per-tool detection methods (Apify, Gemini, Grok, whisper, Nano Banana, Pipeboard, document tools), required config-update format, and the intent-based tool surfacing matrix.
 

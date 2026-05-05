@@ -41,6 +41,14 @@ PyPI distribution `mainbranch` tracks the same version sequence.
   operators and small teams running real businesses (solo founders, small
   agencies, course creators, productized services, indie SaaS, small ecom
   teams). Refs #306.
+- Updated bundled lifecycle and output skills to lean on deterministic
+  `mb status --json --peek`, `mb connect plan`, `mb connect doctor --json`,
+  and `mb update --repo .` facts instead of duplicating repo-health,
+  provider-readiness, and update probes in skill prose. Added a `loops:` field
+  to the SKILL.md frontmatter schema and extended `mb skill validate` to require
+  it on every bundled skill. Skill authors maintaining third-party skills must
+  backfill the `loops:` field before upgrading; existing installations with
+  skills lacking the field will fail `mb skill validate`. Refs #263 and #306.
 - Clarified beginner, migration, and `/mb-help` docs that `.mb/` is the current
   repo-local Main Branch state folder and `.mb-vip/` is not required. Refs
   #296.

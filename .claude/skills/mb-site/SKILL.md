@@ -8,6 +8,7 @@ description: "Triage and build any site shape — lander (1 page), minisite (~4 
   (5) Previewing or publishing changes
 
   Triggered by: /mb-site, 'build a site', 'landing page', 'lander', 'minisite', 'website', 'I need a site', 'spin up a site', 'put this online', 'publish site', 'deploy site', 'update my site', 'graduate my site', 'add a CMS to my site'"
+loops: [ship]
 ---
 
 # Site
@@ -25,6 +26,10 @@ Say `/mb-site` again after compaction, context loss, or switching focus. It relo
 ## Pull Latest Updates
 
 For the canonical engine resolution + pull bash block (and the failure warning), see [`references/pull-engine-updates.md`](references/pull-engine-updates.md). Run it at the start of every invocation.
+
+When a business repo is known, run `mb status --json --peek` and use its
+`readiness`, `drift.items`, `integrations`, `measurement`, and `ranked_actions`
+facts before inventing setup, provider, or launch-readiness checks in prose.
 
 ---
 
@@ -293,7 +298,7 @@ Use that JSON as the readiness source of truth:
 
 Do not invent `ready_for_launch` or say Main Branch can launch the campaign. The readiness states are exactly `missing`, `blocked`, `ready_for_preview`, `ready_for_operator_review`, and `ready`.
 
-Never ask the operator to paste Google Ads, GTM, OAuth, or API tokens into chat. Use `mb connect plan`, `mb connect status --all --json`, or `mb connect doctor --json` for provider readiness and quote the CLI's `next_command` / `repair_command`.
+Never ask the operator to paste Google Ads, GTM, OAuth, or API tokens into chat. Use `mb connect plan` or `mb connect doctor --json` for provider readiness and quote the CLI's `next_command` / `repair_command`.
 
 ---
 
@@ -305,7 +310,7 @@ If conversation compacted or context was lost:
 2. **Check invocation mode:** business repo mode (`core/`) or site repo mode (`.mainbranch/source.json`)
 3. **Load links:** read `.mainbranch/source.json` in the site repo, or the campaign/site record in the business repo
 4. **Identify the site shape** from the campaign/site record or existing files; load the corresponding build ref
-5. **Check site repo status:** `cd <site_repo> && git status && git log --oneline -5`
+5. **Check continuity:** use business-repo `mb status --json --peek` facts first, then site-repo git history only for site-code changes
 6. **Resume from last completed step** based on git history, source links, and campaign launch status
 
 ---

@@ -1,6 +1,7 @@
 ---
 name: mb-end
 description: "Session-closing skill that helps users wrap up intentionally. Use when: user says done, wrapping up, end my day, closing out, call it a day, goodnight, that's it for today, checkpoint, pause. Bookend to /mb-start. Scans git activity, surfaces what happened, spawns a crystallize agent for deep analysis, commits uncommitted work, and closes with a brief summary. Works for end-of-day, end-of-research-batch, end-of-decision-sprint, or mid-work checkpoints."
+loops: [reflect, ship]
 ---
 
 # End
@@ -274,14 +275,10 @@ If an insight was substantial enough to update reference directly (soul.md, offe
 
 ## Step 6: Checkpoint & Close
 
-Use the checkpoint CLI. Do not hand-roll staging logic unless `mb checkpoint`
-is unavailable.
+Use the current repo git workflow with explicit operator approval. The
+checkpoint CLI is future v0.3.x work; do not ask current PyPI users to run it.
 
-```bash
-mb checkpoint --plan --json
-```
-
-**If `status == "ready"`:**
+**If there are unsaved changes:**
 
 > "You have unsaved work:
 >
@@ -290,18 +287,16 @@ mb checkpoint --plan --json
 > Want me to save a checkpoint before we close?"
 
 If yes:
-- Run `mb checkpoint --message "[checkpoint] <plain business summary>" --yes`.
+- Stage only the intended business-repo files.
+- Commit with a readable operator subject.
 - Use beginner-safe language: "saved checkpoint," not "ran git commit."
 - Include the crystallize research file in the checkpoint if one was created.
 
 If no: Leave the work unchanged. Some people prefer to checkpoint at the start
 of next session.
 
-**If `status == "blocked"`:** Explain the safety block from JSON. Do not commit
-around it with raw git. Tell the user the checkpoint was not saved because Main
-Branch found something that may be local, private, conflicted, or unsafe.
-
-**If `status == "clean"`:** Skip this.
+If safety is unclear, do not stage or commit. Explain the block and leave the
+work unchanged.
 
 ### The Close
 

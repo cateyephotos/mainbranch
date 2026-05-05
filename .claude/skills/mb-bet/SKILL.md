@@ -1,6 +1,7 @@
 ---
 name: mb-bet
 description: "Open, update, close, list, and narrate Main Branch business bets from repo truth. Use when the operator wants to frame an operating bet, track progress, capture a verdict, or draft public-safe narration."
+loops: [decide, reflect, ship]
 ---
 
 # Bet
@@ -32,7 +33,7 @@ operator to start Claude from the business repo or run `/mb-start`.
 Before writing, run:
 
 ```bash
-mb status --json
+mb status --json --peek
 ```
 
 Use the result to spot active bets and repo readiness. After writing or editing
@@ -151,7 +152,7 @@ Use when the deadline passed, the target is hit, or the operator decides to stop
 
 ## Mode: list
 
-Summarize active bets from `mb status --json` and direct file reads:
+Summarize active bets from `mb status --json --peek` and direct file reads:
 
 - deadline
 - status

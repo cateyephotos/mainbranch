@@ -1,6 +1,7 @@
 ---
 name: mb-setup
 description: "Bootstrap a new business repo with Main Branch structure, or migrate an existing single-offer repo to multi-offer. Use when: (1) New user needs Claude Code environment configured (2) User says \"set up\", \"get started\", \"initialize\", \"bootstrap\", \"create my repo\", \"new business\" (3) User is new to Main Branch and needs full onboarding (4) Migrating existing business context into the Main Branch structure (5) User wants to add a second offer to an existing repo. Creates Chrome extension setup, two-repo model, business repo with full structure. Gathers context aggressively until complete. Applies domain rubrics by business type. Teaches concepts during setup."
+loops: [sense, decide, ship]
 ---
 
 # Repo Setup
@@ -9,10 +10,9 @@ Get a new user fully configured with Claude Code and their business repo. Use
 `mb onboard status --json` and `mb onboard plan` as the durable progress
 contract; do not keep onboarding state only in chat prose.
 
-For provider setup, use `mb connect plan`, `mb connect status --all --json`,
-and `mb connect doctor --json` as the durable readiness contract. Explain
-providers as business capabilities, not developer config, and end with exact
-commands.
+For provider setup, use `mb connect plan` and `mb connect doctor --json` as the
+durable readiness contract. Explain providers as business capabilities, not
+developer config, and end with exact commands.
 
 ---
 

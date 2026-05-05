@@ -1,6 +1,7 @@
 ---
 name: mb-help
 description: "Answer questions about Main Branch and Claude Code. Use when: user asks how/what/why questions, is confused about two-repo model or skills, encounters errors, says help or stuck, asks about workflow, is a beginner, or wants to know what to do next."
+loops: [sense, decide]
 ---
 
 # Help
