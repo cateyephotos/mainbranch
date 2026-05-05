@@ -13,6 +13,10 @@ PyPI distribution `mainbranch` tracks the same version sequence.
 
 ### Added
 
+- Added an accepted operator-readable git history decision that defines the
+  business commit verb contract, Sense / Decide / Ship / Reflect loop mapping,
+  checkpoint trailer guidance, and follow-up implementation slices. Closes
+  #300.
 - Added planning-only `mb checkpoint --plan --json` so agents can inspect
   dirty business repos, classify changed files, run safety gates, and propose
   readable checkpoint messages before commit execution ships. Refs #290.
@@ -28,6 +32,9 @@ PyPI distribution `mainbranch` tracks the same version sequence.
 
 ### Changed
 
+- Aligned the operator-readable git history contract with the four-loop
+  taxonomy from the operator-loop decision: Sense, Decide, Ship, and Reflect.
+  Refs #300 and #306.
 - Rewrote `docs/OPERATOR-LOOPS.md` to the four-loop taxonomy
   (Sense -> Decide -> Ship -> Reflect) with examples, anti-examples, loop
   chains, the skills-vs-loops principle, and the channels-vs-loops separation
