@@ -16,6 +16,27 @@ PyPI distribution `mainbranch` tracks the same version sequence.
 - Clarified quick start and beginner docs so daily users run `claude` then
   `/mb-start` without a separate `mb status` step. `mb status` is now framed as
   the terminal-only briefing that `/mb-start` reads internally.
+- Clarified migration, beginner, README, educational, and skill guidance so
+  Claude treats Main Branch updates as the required first fix through
+  `/mb-update` / `mb update`, repairs one repo at a time, and explains any git
+  branch as a safe draft instead of leaving beginners to decide what to merge.
+- Tightened migration read-only checks to use `mb status --peek` and clarified
+  that `.mb/last-status-seen.json` is local operational state, not migration
+  work to commit.
+- Clarified that Claude-led migration should pause after branch summaries so
+  users and maintainers can review git decisions instead of having Claude push,
+  open, merge, rebase, or delete branches by default.
+- Added migration dogfood guidance that distinguishes structural checks from
+  runtime smoke, documents command mutability, and recommends one-repo-at-a-time
+  migration with `--peek` / `--check` discovery.
+- Added migration guidance for static runtime-smoke fallbacks and for detecting
+  old clone-path `.claude/lenses/` or `.claude/reference/` symlinks that
+  skill-link repair does not yet own.
+- Updated generated repo scaffolds, `mb skill link`, and checkpoint safety so
+  Claude Code app `.claude/worktrees/` state is treated as local runtime output,
+  not business repo work to commit.
+- Clarified migration runtime smoke language so agents distinguish slash-command
+  discovery and read-only core access from a full `/mb-think` workflow.
 
 ## [0.3.1] - 2026-05-05
 
