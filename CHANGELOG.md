@@ -72,6 +72,10 @@ guidance from real dogfood.
   canonical `core/` subfolders for proof, brand, strategy, and operations;
   expanded migration and skill validation to treat legacy `reference/*` paths
   as compatibility-only. Refs #318.
+- Refactored `/mb-site` into a compact router with progressively loadable
+  minisite step references, and split examples from troubleshooting so agents
+  can load only the detail needed for the current site step. Refs #107 and
+  #110.
 
 ## [0.3.1] - 2026-05-05
 
