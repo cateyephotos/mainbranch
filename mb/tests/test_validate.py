@@ -507,3 +507,83 @@ def test_validate_cli_cross_refs_default_warns_strict_fails(tmp_path: Path) -> N
     payload = json.loads(result.stdout)
     assert payload["ok"] is False
     assert payload["files"][0]["ok"] is False
+
+
+def _campaign(status: str) -> str:
+    return f"---\nslug: workshop-waitlist\nstatus: {status}\n---\n# Workshop waitlist\n"
+
+
+def test_validate_accepts_campaign_lifecycle_statuses(tmp_path: Path) -> None:
+    for status in ("draft", "planned", "active", "paused", "completed", "canceled", "archived"):
+        path = tmp_path / "campaigns" / f"2026-05-{status}-push" / "campaign.md"
+        _write(path, _campaign(status))
+
+    report = run(path=str(tmp_path))
+
+    assert report["ok"] is True, report
+    campaign_files = [f for f in report["files"] if "campaigns/" in f["path"]]
+    assert len(campaign_files) == 7
+    assert all(f["ok"] for f in campaign_files)
+
+
+def test_validate_rejects_offer_only_status_on_campaign(tmp_path: Path) -> None:
+    # `running` and `scaling` are valid offer statuses but invalid for campaigns;
+    # the merged decision tells operators to use `active`.
+    _write(
+        tmp_path / "campaigns" / "2026-05-bad" / "campaign.md",
+        _campaign("scaling"),
+    )
+
+    report = run(path=str(tmp_path))
+
+    assert report["ok"] is False
+    bad = [f for f in report["files"] if not f["ok"]]
+    assert any("status" in e for f in bad for e in f["errors"])
+
+
+def test_validate_flags_unknown_campaign_status(tmp_path: Path) -> None:
+    _write(
+        tmp_path / "campaigns" / "2026-05-typo" / "campaign.md",
+        _campaign("live"),  # operator-vocab synonym; not yet wired
+    )
+
+    report = run(path=str(tmp_path))
+
+    assert report["ok"] is False
+    bad = [f for f in report["files"] if not f["ok"]]
+    assert any("status" in e for f in bad for e in f["errors"])
+
+
+def test_cross_refs_flag_campaign_status_transition_regressions(tmp_path: Path) -> None:
+    # A newer campaign supersedes an older one but reports a status earlier
+    # in the campaign lifecycle. The status-transition checker should flag it
+    # against CAMPAIGN_STATUS_ORDER, not the offer order.
+    _write(
+        tmp_path / "campaigns" / "2026-05-old-push" / "campaign.md",
+        (
+            "---\n"
+            "slug: old-push\n"
+            "status: completed\n"  # order = 3
+            "---\n"
+            "# old push\n"
+        ),
+    )
+    _write(
+        tmp_path / "campaigns" / "2026-05-new-push" / "campaign.md",
+        (
+            "---\n"
+            "slug: new-push\n"
+            "status: draft\n"  # order = 0 — backward
+            "supersedes: campaigns/2026-05-old-push/campaign.md\n"
+            "---\n"
+            "# new push\n"
+        ),
+    )
+
+    report = run(path=str(tmp_path), cross_refs=True)
+
+    transition_warnings = [
+        w for w in report["cross_refs"]["warnings"] if w["code"] == "status-transition"
+    ]
+    assert len(transition_warnings) == 1
+    assert "move backward" in transition_warnings[0]["message"]
