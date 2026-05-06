@@ -337,6 +337,87 @@ def _repo_layout_check(repo: Path) -> dict[str, Any]:
     }
 
 
+def _legacy_campaigns_check(repo: Path) -> dict[str, Any]:
+    """Detect legacy `campaigns/` records as drift from the canonical `pushes/` shape.
+
+    Per the push primitive decision, ``pushes/`` is the canonical engine
+    primitive. ``campaigns/`` records remain as compatibility reads but new
+    coordinated work should land in ``pushes/``. This check warns when a repo
+    has any legacy campaign records so the operator can preview the migration.
+    """
+    campaigns_dir = repo / "campaigns"
+    if not campaigns_dir.is_dir():
+        return {
+            "name": "legacy-campaigns",
+            "ok": True,
+            "detail": "no legacy campaigns/ records",
+            "severity": "ok",
+        }
+
+    plan = migrate_mod.plan_campaigns_to_pushes(repo)
+    legacy_records: list[str] = []
+    ambiguous_files: list[str] = []
+    blocker_paths: list[str] = []
+
+    for move in plan.get("moves", []):
+        from_path = str(move["from"])
+        legacy_records.append(f"{from_path}/campaign.md")
+        ambiguous_files.extend(str(path) for path in move.get("review_inside_folder", []))
+
+    for ambiguous in plan.get("ambiguous", []):
+        ambiguous_files.append(str(ambiguous["from"]))
+
+    for blocker in plan.get("blockers", []):
+        from_path = str(blocker["from"])
+        blocker_paths.append(from_path)
+        record = repo / from_path / "campaign.md"
+        if record.is_file():
+            legacy_records.append(f"{from_path}/campaign.md")
+
+    legacy_records = sorted(set(legacy_records))
+    ambiguous_files = sorted(set(ambiguous_files))
+    blocker_paths = sorted(set(blocker_paths))
+
+    total = len(legacy_records) + len(ambiguous_files) + len(blocker_paths)
+    if total == 0:
+        # Empty campaigns/ folder (e.g. just a .gitkeep). No drift to warn.
+        return {
+            "name": "legacy-campaigns",
+            "ok": True,
+            "detail": "campaigns/ folder is empty",
+            "severity": "ok",
+        }
+
+    parts: list[str] = []
+    if legacy_records:
+        parts.append(
+            f"{len(legacy_records)} legacy campaign record(s) found. "
+            "Main Branch now writes pushes/. Run "
+            "`mb migrate campaigns --plan` to preview a safe move."
+        )
+    if ambiguous_files:
+        parts.append(
+            f"{len(ambiguous_files)} ambiguous path(s) under campaigns/ that may "
+            "belong in pushes/, documents/, or stay in place; "
+            "review with `mb migrate campaigns --plan`."
+        )
+    if blocker_paths:
+        parts.append(
+            f"{len(blocker_paths)} blocker(s) under campaigns/ require operator input "
+            "before migration can be planned."
+        )
+
+    return {
+        "name": "legacy-campaigns",
+        "ok": False,
+        "detail": " ".join(parts),
+        "severity": "warn",
+        "legacy_records": legacy_records,
+        "ambiguous_files": ambiguous_files,
+        "blockers": blocker_paths,
+    }
+
+
 def _schema_version_check(repo: Path) -> dict[str, Any]:
     current = read_schema_version(repo)
     pending = pending_migrations(repo)
@@ -734,6 +815,7 @@ def run(path: str) -> dict[str, Any]:
     )
     checks.append(_repo_layout_check(repo))
     checks.append(_schema_version_check(repo))
+    checks.append(_legacy_campaigns_check(repo))
     checks.append(connect_mod.doctor_check(repo, status=integration_status))
     onboarding = onboard_mod.onboarding_status(repo)
     onboarding_summary = onboarding["summary"]
@@ -843,6 +925,10 @@ def repair_plan(
 
     migration = migrate_mod.check(target, include_diff=False)
     reference_state = _legacy_reference_state(target)
+    legacy_campaigns_check = next(
+        (check for check in doctor_report["checks"] if check["name"] == "legacy-campaigns"),
+        None,
+    )
     layout_checks = [
         {
             "name": check["name"],
@@ -850,7 +936,7 @@ def repair_plan(
             "summary": check["detail"],
         }
         for check in doctor_report["checks"]
-        if check["name"] in {"repo-layout", "schema-version"}
+        if check["name"] in {"repo-layout", "schema-version", "legacy-campaigns"}
     ]
     layout_checks.extend(
         {
@@ -886,6 +972,21 @@ def repair_plan(
                     "`--apply --include-migration` only after reviewing the preview"
                 ),
                 writes=["core/", "reference/core", "reference/offers", ".mb/schema_version"],
+            )
+        )
+    if legacy_campaigns_check and not legacy_campaigns_check["ok"]:
+        actions.append(
+            _action(
+                id="legacy_campaigns_to_pushes",
+                title="Preview campaigns -> pushes migration",
+                state="warn",
+                mode="read",
+                command="mb migrate campaigns --plan",
+                safe_to_apply=True,
+                reason=(
+                    "campaigns/ is legacy compatibility; new coordinated work "
+                    "writes to pushes/. Preview the move before applying."
+                ),
             )
         )
     sections.append(

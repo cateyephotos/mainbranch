@@ -8,6 +8,20 @@ loops: [ship]
 
 Routes to the right framework based on your offer type.
 
+## Output destinations and operator vocabulary
+
+VSL scripts that wrap a coordinated push (a launch, drop, challenge, etc.)
+land under `pushes/<YYYY-MM-DD-slug>/` (canonical engine primitive). The
+push record itself is `pushes/<YYYY-MM-DD-slug>/push.md` (`type: push`).
+A one-off VSL that isn't part of a coordinated push can sit under the
+relevant offer in `core/offers/<offer>/` instead.
+
+If `core/vocabulary.md` defines display words (e.g. `terms.push.singular:
+launch`), speak the operator's word in conversation while still writing
+canonical files. If the repo still has legacy `campaigns/` records,
+recommend `mb doctor` and `mb migrate campaigns --plan` before creating
+new push work.
+
 ---
 
 ## Pull Latest Updates
@@ -136,7 +150,7 @@ For high-ticket B2B services. Full reference: `references/frameworks/b2b-haynes.
 
 ## Output Path
 
-**Standard:** `campaigns/YYYY-MM-DD-vsl-[offer]-{campaign}/vsl-script.md` (include offer slug in multi-offer mode; omit `[offer]-` in single-offer mode)
+**Standard:** `pushes/YYYY-MM-DD-vsl-[offer]-{slug}/vsl-script.md` (include offer slug in multi-offer mode; omit `[offer]-` in single-offer mode). On legacy repos that still have `campaigns/`, run `mb migrate campaigns --plan` first; do not write new VSLs under `campaigns/`.
 
 Campaign name is REQUIRED. Ask user if not provided. Examples: `skool-about`, `agency-pitch`, `membership-sales`.
 
@@ -185,7 +199,7 @@ Just say `/mb-vsl` again and describe where you were:
 2. **Check for in-progress scripts:**
 
 ```bash
-ls -ltd campaigns/*-vsl-*/ 2>/dev/null | head -3
+ls -ltd pushes/*-vsl-*/ 2>/dev/null | head -3
 ```
 
 3. **Re-read key files:**

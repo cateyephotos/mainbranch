@@ -10,6 +10,20 @@ Create organic content scripts in your voice — Reels, TikToks, carousels, stat
 
 **Need help?** Type `/mb-help` + your question anytime. If conversation compacts, `/mb-help` reloads fresh context.
 
+## Output destinations and operator vocabulary
+
+When this skill produces a coordinated push (a content sequence with a goal,
+audience, and review date), write the wrapping record to
+`pushes/<YYYY-MM-DD-slug>/push.md` (`type: push`, `linked_pushes` for inbound
+links). One-off scripts and source captures route to `documents/transcripts/`
+or `documents/prototypes/` per the artifact-routing rules in the system
+architecture doc; they don't need a push wrapper.
+
+If `core/vocabulary.md` defines display words (e.g. `terms.push.singular: drop`),
+speak the operator's word in conversation while still writing canonical files.
+If the repo still has legacy `campaigns/` records, recommend `mb doctor` and
+`mb migrate campaigns --plan` before creating new push work.
+
 ---
 
 ## Triage
@@ -163,7 +177,7 @@ Generate multi-slide carousel copy from a concept.
 
 Generate single-post caption from a concept.
 
-**Output path (all script modes):** `campaigns/YYYY-MM-DD-organic-[offer]-{campaign}/organic-batch-001.md` (include offer slug in multi-offer mode; omit `[offer]-` in single-offer mode)
+**Output path (all script modes):** `pushes/YYYY-MM-DD-organic-[offer]-{slug}/organic-batch-001.md` (include offer slug in multi-offer mode; omit `[offer]-` in single-offer mode). On legacy repos that still have `campaigns/`, run `mb migrate campaigns --plan` first; do not write new content under `campaigns/`.
 
 **Output frontmatter:**
 ```yaml
@@ -185,7 +199,7 @@ Campaign name is REQUIRED. Ask user if not provided. Examples: `january-hooks`, 
 **At session start, scan what's been done:**
 
 1. Check `research/*-competitor-mine.md` — Who was mined? When?
-2. Check `campaigns/*-organic-*/` — What scripts exist?
+2. Check `pushes/*-organic-*/` — What scripts exist? Treat `campaigns/` as a legacy fallback only.
 3. Don't suggest re-mining same handles from today
 4. Recommend generating from existing mining if concepts unused
 5. Check `core/content-strategy.md` — What pillars are defined? What platform is the target?
@@ -220,7 +234,7 @@ Before saving: show file paths.
 3. **Select concept** — User picks from mined concepts or provides their own
 4. **Adapt to brand** — Map concept to user's offer, audience, voice
 5. **Generate scripts** — Use appropriate framework (video/carousel/static)
-6. **Save output** — Scripts to `campaigns/YYYY-MM-DD-organic-{campaign}/`
+6. **Save output** — Scripts to `pushes/YYYY-MM-DD-organic-{slug}/` (canonical). Never `campaigns/`; that folder is legacy compatibility only.
 7. **Commit prompt** — "Saved to [path]. Want me to commit this to git?"
 
 **Mining lives in `/mb-think` now.** If user needs to mine competitors, route them there first.
