@@ -17,13 +17,19 @@ PyPI distribution `mainbranch` tracks the same version sequence.
   contract, proposes subjects such as `[added] market.md`, validates checkpoint
   messages with `--validate` or stdin, and exposes parsed verb/loop/channel
   metadata for future status and timeline consumers. Refs #301.
+- Accepted decisions now capture Postiz as the candidate social scheduling rail
+  to smoke next, plus the growth-automation playbook boundary for future
+  comment-to-DM and resource-delivery add-ons. Refs #341.
 
 ### Changed
 
 - Added `/mb-think` winning-ad research guidance for customer language,
   competitor gap maps, review mining, script teardown, and social comment
   mining, with `/mb-ads` routing pointers and provider-boundary notes for
-  Apify, X/Grok, Postiz, X API, and ManyChat-style automation. Refs #341.
+  Apify, X/Grok, Postiz, X API, and ManyChat-style automation. Follow-up
+  guidance now distinguishes Apify public X post/profile/reply mining from
+  Grok topic sentiment, and clarifies that DM/comment-keyword CTAs are draft
+  strategy, not supported automation. Refs #341.
 
 ## [0.3.5] - 2026-05-06
 
