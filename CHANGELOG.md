@@ -31,6 +31,11 @@ PyPI distribution `mainbranch` tracks the same version sequence.
   Claude Code is told to read `mb` status/start/doctor facts before setup or
   repair advice, separate read-only checks from write/apply repairs, and return
   technical repair results in business-owner language. Refs #353.
+- Hardened old-layout migration output so dry-runs show safe next commands,
+  planned backup location, and source-to-target conflict context before apply;
+  bumped the migration JSON envelope schema to v2 for the new per-action
+  `backup` and `next` fields; refreshed docs and bundled skill guidance away
+  from current `reference/` and `campaigns/` write targets. Refs #284.
 - Documented the public build-vs-wrap-vs-sidecar boundary for provider CLIs,
   MCP servers, hosted workflows, and future sidecars, with concrete guidance
   for Cloudflare, Postiz, Apify/X research, Vercel-style platforms,
