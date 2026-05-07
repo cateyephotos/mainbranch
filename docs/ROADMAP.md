@@ -4,6 +4,12 @@ This roadmap is direction, not a promise. GitHub issues and release notes are
 the detailed execution record. This file explains the product shape so users,
 contributors, and agents understand where Main Branch is going.
 
+Main Branch is not only a marketing-growth context folder. Growth is the first
+high-value wedge because ads, pages, content, and launches expose the memory
+problem quickly. The broader product is durable operating memory for
+AI-assisted businesses: meetings, fulfillment, bookkeeping summaries, provider
+refs, decisions, bets, pushes, logs, and lessons in repos the team owns.
+
 ## Shipped Foundation
 
 Main Branch already ships:
@@ -18,43 +24,55 @@ Main Branch already ships:
 - graph and status primitives for future dashboard and agent workflows;
 - privacy-safe GitHub issue drafting for user friction;
 - `bets/` and `/mb-bet` as the first Reflect primitive;
-- public contribution, support, security, compatibility, and agent guidance.
+- `mb checkpoint` as the first hidden GitOps save layer for long agent runs;
+- public contribution, support, security, compatibility, and agent guidance;
 - accepted workspace/repo/sensitive-data boundary guidance and
   GitHub/Obsidian-compatible markdown/link conventions for future dashboard,
-  team daily log, bookkeeping, and multi-repo work.
+  team daily log, bookkeeping, and multi-repo work;
 - initial paid-traffic site readiness checks through `mb site check`.
 
 Claude Code is the supported runtime today. Other runtimes are compatibility
 targets until adapter code and smoke evidence exist.
 
-## Next: v0.3.0 - Knows What To Do Next
+## Current: v0.3.x - Tighten The Daily Operating Loop
 
-The next major product step is turning `mb status` and `/mb-start` into a
-useful daily decision surface.
+The current product step is tightening `mb status`, `/mb-start`, `/mb-status`,
+doctor repair, checkpoints, pushes, provider readiness, and issue drafting into
+a reliable daily decision surface.
 
 Shipped scope:
 
 - `mb status` v1 with "since last check", drift detection, and a stable JSON
   schema ([#261](https://github.com/noontide-co/mainbranch/issues/261));
+- deterministic next-action ranking with cited status signals;
+- `/mb-start` and `/mb-status` reading the same status substrate instead of
+  duplicating repo probes;
+- shared readiness and repair surfaces through `mb doctor`, `mb doctor repair`,
+  `mb update`, `mb start`, and provider readiness JSON;
 - privacy-safe issue drafting for bugs, missing workflows, confusing errors,
   and feature ideas ([#264](https://github.com/noontide-co/mainbranch/issues/264));
 - `bets/` and `/mb-bet` as the first primitive for tracking and reflecting on
-  operator bets ([#266](https://github.com/noontide-co/mainbranch/issues/266)).
+  operator bets ([#266](https://github.com/noontide-co/mainbranch/issues/266));
+- `pushes/` as the canonical coordinated-work folder, with `campaigns/`
+  retained as compatibility read;
+- git checkpoints as business-readable save points during long agent runs.
 
-Remaining planned scope:
+Active follow-up scope:
 
-- a deterministic next-action ranker with top-three recommendations and cited
-  signals ([#262](https://github.com/noontide-co/mainbranch/issues/262));
-- `/mb-start` using the same status and ranker substrate
-  ([#262](https://github.com/noontide-co/mainbranch/issues/262));
-- `/mb-status` as a thin runtime wrapper over deterministic status facts;
-- shared readiness checks so skills call `mb` instead of duplicating probes
-  ([#263](https://github.com/noontide-co/mainbranch/issues/263));
-- cleaner beginner/provider onboarding that explains the tool philosophy and
-  proves GitHub/provider readiness before noob users get stuck
-  ([#273](https://github.com/noontide-co/mainbranch/issues/273)).
+- make checkpoint verbs business-readable and consistent
+  ([#301](https://github.com/noontide-co/mainbranch/issues/301));
+- install business commit validation into repo workflows
+  ([#302](https://github.com/noontide-co/mainbranch/issues/302));
+- use the business git journal in status and timelines
+  ([#303](https://github.com/noontide-co/mainbranch/issues/303));
+- define a stable JSON result envelope across `mb` commands
+  ([#297](https://github.com/noontide-co/mainbranch/issues/297));
+- harden old-layout migration and legacy reference-path repair
+  ([#284](https://github.com/noontide-co/mainbranch/issues/284));
+- move provider automation behind explicit approval gates
+  ([#286](https://github.com/noontide-co/mainbranch/issues/286)).
 
-Anti-scope for v0.3.0:
+Anti-scope for v0.3.x:
 
 - no dashboard as source of truth;
 - no broad multi-runtime support claims;
@@ -62,38 +80,51 @@ Anti-scope for v0.3.0:
 - no automatic model invocation from `mb`;
 - no provider setup that stores secrets in repo files.
 
-## Soon: v0.3.x - Improves Itself In Public
+## Soon: Dashboard, Sidecars, And Multi-Repo Views
 
-Once Main Branch knows enough to surface next actions, the product should make
-friction easier to turn into public improvement.
+Once the daily operating loop is boring, Main Branch should make the broader
+business system easier to see without replacing the repo as source of truth.
 
 Planned scope:
 
-- a small read-only local dashboard spike over existing JSON outputs
-  ([#189](https://github.com/noontide-co/mainbranch/issues/189));
-- sidecar enrichment contract for optional tools such as public company
-  context, analytics, bookkeeping, transcription, or deployment helpers
-  ([#265](https://github.com/noontide-co/mainbranch/issues/265)).
-- agent checkpoints as hidden Git memory so long Claude Code runs can be saved
-  throughout execution and resumed by `/mb-start`
-  ([#288](https://github.com/noontide-co/mainbranch/issues/288)).
+- a small read-only local dashboard over existing JSON outputs;
+- visual multi-repo inventory for business repos, site repos, offer repos, and
+  sensitive/private repos, with explicit access boundaries;
+- a dashboard map of repos, pushes, bets, commits, issues, PRs, checkpoints,
+  provider-safe summaries, and sidecar summaries;
+- sidecar enrichment contracts for optional tools such as public company
+  context, analytics, bookkeeping, transcription, deployment helpers, and
+  provider metrics;
+- team daily log surfaces built from commits, checkpoints, issues, PRs, and
+  explicit `log/` files instead of treating raw chat as source of truth;
 - follow-up implementation work from the workspace/repo boundary decision and
   markdown/link conventions, including dashboard spikes, team daily log
   surfaces, finance/legal warnings, and broader link repair where issues prove
   the need ([#274](https://github.com/noontide-co/mainbranch/issues/274),
   [#275](https://github.com/noontide-co/mainbranch/issues/275)).
 
-## Later: v0.4 - Launches Offers From Bets
+Anti-scope:
+
+- no dashboard database as canonical business memory;
+- no Slack replacement claim before repo truth, GitHub activity, team logs, and
+  permission boundaries are proven;
+- no finance/legal raw data in shared repos by default;
+- no "connect every SaaS" hub. Provider rails are curated, official where
+  possible, deterministic, smoke-tested, and optional.
+
+## Later: v0.4 - Bets And Pushes Become Operating Systems
 
 The next proof point after the daily decision loop is graduating real business
 bets into offers, pages, ads, fulfillment, and public Ship surfaces.
 
 Planned scope:
 
-- links between bets, decisions, research, campaigns, and outcomes;
+- links between bets, decisions, research, pushes, and outcomes;
 - public bets feed generated through site workflows;
 - offer launch workflow: keyword gate, lander, ads, and `/mb-start`
   orchestration ([#89](https://github.com/noontide-co/mainbranch/issues/89));
+- deterministic site/CMS rails over Cloudflare Pages, DNS, GitHub, and
+  operator-approved measurement checks;
 - decisions on Ops surfaces (books, P&L, compliance) and fulfillment scope;
 - bookkeeping/P&L primitives that respect finance-data privacy boundaries
   ([#128](https://github.com/noontide-co/mainbranch/issues/128)).
@@ -112,7 +143,10 @@ Likely directions:
 - structured data layer for metrics, ads, analytics, P&L, and ledgers, with
   explicit access boundaries before sensitive financial/legal data is surfaced;
 - richer sidecar ecosystem behind narrow JSON contracts;
-- deeper Paid, Organic, Pages, and Ops workflows under the four-pillar framing.
+- deeper Paid, Organic, Pages, and Ops workflows under the four-pillar framing;
+- optional chat or team-communication surfaces that convert important
+  conversation into durable artifacts: issues, proposals, decisions, pushes,
+  logs, and commits.
 
 ## Reading Order
 
