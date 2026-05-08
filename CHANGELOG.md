@@ -28,6 +28,11 @@ PyPI distribution `mainbranch` tracks the same version sequence.
   updates, GitHub/Docs, Cloudflare/Vercel, and sensitive-data guidance teach
   normal business owners through exact Main Branch commands without claiming
   unshipped provider or runtime support. Refs #144.
+- Tightened release simulation guidance so package-visible releases run
+  pre-tag release candidate and release acceptance simulations whenever
+  feasible, require manual transcript review beyond heuristic rubrics, and
+  record whether Claude Code print-mode actually executed read-only `mb`
+  grounding commands or fell back because of permissions. Refs #394.
 
 ## [0.3.9] - 2026-05-08
 
