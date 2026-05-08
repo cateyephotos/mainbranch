@@ -13,6 +13,12 @@ PyPI distribution `mainbranch` tracks the same version sequence.
 
 ### Added
 
+- Added materialized release-simulation fixture profiles to the Claude runtime
+  dogfood harness. Print-mode simulations now run from per-simulation fixture
+  repos for launch-readiness gaps, dirty checkpoint planning, broken skill
+  wiring, synthetic private-data refusal, and legacy drift, with evidence for
+  applied mutations, read-only `mb` facts, permission denials, and grounding
+  verdicts. Refs #402.
 - Added a shared business-primitives reference for offers, bets, pushes,
   reusable playbooks, push playbooks, proof, and decisions, including
   live-validation, graduation, proof-placement, and ask-before-destructive-offer
