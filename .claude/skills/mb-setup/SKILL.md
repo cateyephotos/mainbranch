@@ -188,11 +188,10 @@ for offer in [offer-names]; do
   mkdir -p "core/offers/$offer"
 done
 
-# Write initial current_offer
-echo "current_offer: [first-offer]" > .vip/local.yaml
-
-# Ensure .vip/local.yaml is git-ignored (session state, not shared)
-grep -q ".vip/local.yaml" .gitignore 2>/dev/null || echo ".vip/local.yaml" >> .gitignore
+# Ask before persisting active-offer state. Offer choice can stay session-scoped.
+# If the operator explicitly approves a saved active offer and no CLI command
+# exists yet, ensure .vip/local.yaml is gitignored, then merge-write the legacy
+# fallback without overwriting unrelated keys.
 
 # Create product-ladder.md placeholder at core/product-ladder.md
 touch core/product-ladder.md
@@ -206,7 +205,7 @@ Full structure (single-offer):
 ├── .env                   # Secrets (gitignored)
 ├── .gitignore             # Include .env
 │
-├── .vip/                  # VIP configuration (git-tracked)
+├── .vip/                  # Legacy local config/state
 │   └── config.yaml        # User preferences, infrastructure refs
 │
 ├── core/                  # Evergreen business brain
@@ -250,7 +249,7 @@ Full structure (multi-offer — adds offer folders and `product-ladder.md`):
 │       └── course/
 │           └── offer.md
 └── .vip/
-    ├── config.yaml        # Git-tracked team settings
+    ├── config.yaml        # Legacy team settings
     └── local.yaml         # Git-IGNORED session state (current_offer)
 ```
 
@@ -258,7 +257,7 @@ Full structure (multi-offer — adds offer folders and `product-ladder.md`):
 
 See **[references/repo-scaffolding.md](references/repo-scaffolding.md)** for:
 - API key environment setup (`~/.config/vip/env.sh`)
-- Initial `.vip/config.yaml` template (includes `mcps:` section for MCP server tracking)
+- Legacy `.vip/config.yaml` template (includes `mcps:` section for older MCP tracking)
 - `.gitignore` creation
 
 Run these steps in order: create env.sh, add shell source line, create config.yaml, create .gitignore.
@@ -338,7 +337,7 @@ EOF
 |------|--------|
 | core/offers/[name]/offer.md | [OK] Complete / [WARN] Thin (< 20 lines) / [FAIL] Missing |
 | core/product-ladder.md | [OK] Complete / [WARN] Placeholder |
-| .vip/local.yaml | [OK] Set to [offer] / [FAIL] Missing |
+| active offer | [OK] Selected for session / [INFO] Not persisted |
 
 Ask user for missing pieces or note for later.
 

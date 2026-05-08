@@ -101,75 +101,33 @@ ads with `/mb-ads`, and checkpoint approved artifacts.
 Always use numbered lists for multi-choice: business repo selection, skill
 routing, launch blockers, and provider setup.
 
+Use one active choice namespace per turn. If top recommendations are numbered,
+do not also number offers or skill routes in the same response. Use offer
+slugs/names (`community`, `newsletter`, `all`) or letters for the secondary
+set, and make the prompt explicit:
+
+> "Reply `1` for the top recommendation, or reply with an offer slug like
+> `community`."
+
+Never present two visible choices where the same number means different
+actions. If the operator replies with an ambiguous number, ask what they meant
+before taking action.
+
 ---
 
 ## Detection Flow
 
-```
-/mb-start [optional: repo-name] [optional: offer-name]
-│
-├── Check context level ──────────────→ Fresh? Full load. Heavy? Warn user.
-│
-├── Detect business repo ─────────────→ CWD-first detection (see Step 2)
-│   ├── CWD has core/ or legacy reference/core/? → This IS the repo. Proceed.
-│   ├── CWD has .claude/skills/? ─────→ User is in the engine repo (old workflow). Trigger migration.
-│   └── Neither? ────────────────────→ Check config, then ask user.
-│
-├── Read status facts ────────────────→ `mb status --json --peek`
-│   ├── ranked_actions? ──────────────→ show top recommendation before menu
-│   ├── readiness/drift blockers? ────→ use cited status repair commands
-│   └── unavailable section? ─────────→ use only the documented fallback for that section
-│
-├── Check engine updates ──────────────→ Use status update severity and `mb update`
-│
-├── Load config ──────────────────────→ See [config-system.md](references/config-system.md)
-│   ├── ~/.config/vip/local.yaml ─────→ legacy engine path + default_repo + user identity
-│   └── [repo]/.vip/config.yaml ──────→ Team settings, MCP requirements
-│
-├── Verify Main Branch loaded ────────→ Use status runtime.skill_wiring facts
-│   └── Missing? ────────────────────→ Run the repair command cited by status
-│
-├── MCP pre-flight ───────────────────→ See [mcp-preflight.md](references/mcp-preflight.md)
-│   └── Provider/tool missing? ───────→ Use `mb connect plan` / status repair facts
-│
-├── No business repo found? ──────────→ /mb-setup (creates repo, saves path)
-│
-├── Pull business repo updates ───────→ (your repo, silently)
-│
-├── Onboarding progress check ────────→ Use status onboarding facts
-│   ├── missing core files? ──────────→ collect only current missing inputs
-│   └── complete? ───────────────────→ continue to readiness/menu
-│
-├── Offer detection ──────────────────→ (multi-offer only, see Step 8)
-│   ├── offers/ exists? ─────────────→ Prompt or restore from .vip/local.yaml
-│   └── no offers/ ──────────────────→ Single-offer mode, skip
-│
-├── Has repo but thin? ───────────────→ /mb-think codify
-│   (reference files exist but incomplete)
-│
-├── Present menu ────────────────────→ status readiness gates which options show
-│   (option 1 = triage, recommended)
-│
-├── User picks option 1? ───────────→ Spawn triage agents (see triage-agent.md)
-│
-├── Ready to work? ───────────────────→ Route by intent:
-│   │
-│   ├── "research" / "decide" ────────→ /mb-think
-│   ├── "bet" / "launch test" ─────────→ /mb-bet (new/update/close/list/narrate)
-│   ├── "ads" / "copy" ───────────────→ /mb-ads (triages to static/video/review)
-│   ├── "vsl" / "sales video" ────────→ /mb-vsl (triages to skool/b2b)
-│   ├── "content" / "organic" ────────→ /mb-organic
-│   ├── "newsletter" / "email" ───────→ /mb-think for strategy, /mb-organic for social repurposing
-│   ├── "content strategy" / "pillars"→ /mb-think
-│   ├── "wiki" / "notes" ─────────────→ /mb-wiki
-│   ├── "help" / questions ───────────→ /mb-help
-│   ├── "done" / "wrapping up" ──────→ /mb-end
-│   └── unclear ──────────────────────→ Show options + mention /mb-help
-│
-├── "confused" / "stuck" ─────────────→ /mb-help
-│
-└── "done" / "end my day" ───────────→ /mb-end
-```
+1. Detect repo CWD-first; use config only when CWD is not a business repo.
+2. Run `mb status --json --peek`; status facts gate updates, repair, readiness,
+   onboarding, ranked actions, and continuity.
+3. Use status-cited repair/update commands before routing into output work.
+4. Resume onboarding from status facts; in rich repos, read existing `core/`
+   before asking bounded missing-profile questions.
+5. Resolve multi-offer context without reusing numbered choices or silently
+   writing local state.
+6. Present one clear route set or infer intent: `/mb-think`, `/mb-bet`,
+   `/mb-ads`, `/mb-vsl`, `/mb-organic`, `/mb-site`, `/mb-wiki`, `/mb-help`, or
+   `/mb-end`.
 
 ---
 
@@ -262,6 +220,14 @@ Use the JSON envelope as the source of truth for onboarding progress:
 If `core_reference` is pending, collect only enough to draft the missing core
 files. Do not ask for full finances, credentials, raw customer/member exports,
 or exhaustive operations details before the core files exist.
+
+If the repo already has substantive current `core/` files, read and summarize
+those facts before asking onboarding questions. Mine `core/offer.md`,
+`core/audience.md`, `core/voice.md`, `core/soul.md`, and `core/proof/` when
+present; include `core/offers/*/offer.md` names in multi-offer repos. Propose
+answers for bounded missing inputs from existing repo truth, cite which files
+informed the proposal, and ask the operator only to confirm or correct the
+facts that remain uncertain.
 
 If the user's team size or current success stage is missing, ask briefly and
 update the plan:
@@ -363,6 +329,11 @@ Adapt display to `user.experience` level (beginner = full breakdown, advanced = 
 
 **Exception:** Read `[repo]/CLAUDE.md` (the business brain) — it's small and needed for personality/routing awareness. Skip the 4 full core files.
 
+**Onboarding exception:** When onboarding is incomplete and current `core/`
+files already exist, read enough of those files to avoid asking for facts the
+repo already contains. Keep this bounded: summarize the existing facts and ask
+only for confirmation or missing profile fields.
+
 **Multi-offer context:** If `current_offer` is set (see Step 8), note the active offer for routing. Don't load the offer file — the selected skill will.
 
 ---
@@ -382,17 +353,33 @@ also absent, use `reference/offers` as the fallback. In current repos,
 **If no offers/ folder:** Single-offer mode. Skip to Step 2. Everything reads from `core/`.
 
 **If offers/ found:** Multi-offer mode.
-1. Check `.vip/local.yaml` for `current_offer`
-2. If set: Confirm — "Working on **[offer]**. Continue? (y / type offer name to switch)"
-3. If not set: Present numbered list of offers + "all (brand-level work)"
-4. Write selection to `.vip/local.yaml`:
-   ```bash
-   mkdir -p .vip && echo "current_offer: [name]" > .vip/local.yaml
-   ```
+1. Check current CLI status facts first. If a future `mb` JSON field exposes
+   active-offer local state, prefer that. If not, read `.vip/local.yaml` only as
+   a legacy fallback.
+2. If a legacy active offer is set, confirm in plain language:
+   "I see legacy session state for **[offer]**. Continue with that offer, work
+   brand-level, or switch?"
+3. If no active offer is set, present offers by slug/name, not numbers when
+   ranked actions or routes are already numbered:
+   - `community` — paid community
+   - `newsletter` — newsletter
+   - `all` — brand-level work from `core/`
+4. Treat the user's selection as session-scoped until they explicitly confirm
+   persistence. Say what will happen before writing local state:
+   "For this session I'll use **[offer]**. Save that as the active offer for
+   future sessions too?"
+5. Only after explicit confirmation, persist with the current supported
+   repo-local state path. If no CLI command exists yet, `.vip/local.yaml` is a
+   legacy fallback; merge-write it without overwriting unrelated keys. Do not
+   use `echo > .vip/local.yaml`.
 
-**Shortcut:** `/mb-start [offer-name]` sets `current_offer` directly and skips the selection prompt. If the argument matches an offer folder name, write it to `.vip/local.yaml` and confirm: "Locked to **[offer-name]**."
+**Shortcut:** `/mb-start [offer-name]` selects that offer for the current
+session after validating the folder exists. It does not silently persist
+session state. Ask before saving it as the future active offer.
 
-**"all" selection:** When user picks "all" or "brand-level work", set `current_offer: null` in `.vip/local.yaml`. Skills will read from `core/` only — appropriate for brand-level thinking, content strategy, and soul/voice work.
+**"all" selection:** When user picks "all" or "brand-level work", use brand
+level `core/` context for this session. Ask before persisting any local state
+that clears an active offer.
 
 ---
 
@@ -420,7 +407,13 @@ to `/mb-think`.
 
 **Show context:** Before presenting options, show: "Business: **[repo name]** | Offer: **[current_offer or 'single']**"
 
-**Surface unread CHANGELOG entries before the menu**, present option 1 (triage), and use the "while you wait" pattern when spawning agents. See **[references/triage-menu.md](references/triage-menu.md)** for the full menu, the CHANGELOG "what's new" banner format (diff'd against `last_seen_version`), the random "while you wait" filler lines, and rules for when to auto-suggest or skip triage.
+**Surface unread CHANGELOG entries before the menu**, present the triage route
+without reusing a number from recommendations or offers, and use the "while you
+wait" pattern when spawning agents. See
+**[references/triage-menu.md](references/triage-menu.md)** for the full menu,
+the CHANGELOG "what's new" banner format (diff'd against `last_seen_version`),
+the random "while you wait" filler lines, and rules for when to auto-suggest or
+skip triage.
 
 ---
 
@@ -450,7 +443,7 @@ Auto-detect user intent and route. Skills: `/mb-update`, `/mb-help`, `/mb-setup`
 
 | Keywords | Route To |
 |----------|----------|
-| "what should I work on", "help me prioritize", "what to do next", "figure out what to work on", "deep triage" | Option 1 → Triage (see [triage-agent.md](references/triage-agent.md)) |
+| "what should I work on", "help me prioritize", "what to do next", "figure out what to work on", "deep triage" | Triage route (see [triage-agent.md](references/triage-agent.md)) |
 | "help", "confused", "stuck", "don't understand", "how do I" | `/mb-help` |
 | "new", "first time", "get started", "set up" | `/mb-setup` |
 | "add", "update", "more context", "new testimonials", "enrich" | `/mb-think codify` |
@@ -471,7 +464,11 @@ Auto-detect user intent and route. Skills: `/mb-update`, `/mb-help`, `/mb-setup`
 
 ## Recovering from Compaction
 
-If re-invoked after compaction: re-read `~/.config/vip/local.yaml` for repo + identity, and `.vip/local.yaml` in the business repo for `current_offer`. Don't re-prompt — confirm: "Restored offer context: **[offer-name]**."
+If re-invoked after compaction: re-read `~/.config/vip/local.yaml` for repo +
+identity, then use status/CLI facts for active offer if available. Read
+`.vip/local.yaml` in the business repo only as a legacy fallback for
+`current_offer`. Confirm the restored context, but do not write local state
+without explicit approval.
 
 ---
 
