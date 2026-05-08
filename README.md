@@ -243,6 +243,12 @@ The CLI surface for the engine. Built for Claude Code first; runtime-agnostic by
 
 Full list: `mb --help`.
 
+Machine-readable command output follows the additive
+[JSON output contract](docs/json-output-contract.md): high-value `--json`
+surfaces expose shared `result_envelope_version`, `result_schema`,
+`mb_command`, `ok`, `result_status`, `errors`, `warnings`, and `actions`
+metadata while preserving their command-specific payload keys.
+
 ### Provider Connections
 
 `mb connect` is the local-first foundation for supported, planned, and optional
