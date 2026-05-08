@@ -13,6 +13,11 @@ PyPI distribution `mainbranch` tracks the same version sequence.
 
 ### Added
 
+- Added bundled skill guidance for a guided offer-launch path: `/mb-start`
+  can route an operator from active offer to keyword-gate research, canonical
+  launch push, one-page lander, provider-safe ad launch plan/check, and
+  checkpointed approval records without claiming live provider mutation. Refs
+  #89.
 - Added a beginner education catalog for `mb educational`, including the
   daily owner loop, Main Branch anti-SaaS why, CLI/dashboard, markdown/Notion,
   git/cloud-sync, Cloudflare Pages, Cal.com, Beancount, Forgejo, Cursor, and
