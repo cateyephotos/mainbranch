@@ -18,6 +18,11 @@ PyPI distribution `mainbranch` tracks the same version sequence.
   threads when needed, `/mb-start` regenerates the current view from facts, and
   `/mb-end` remains closure/checkpointing rather than tomorrow planning. Refs
   #377.
+- Accepted the X resource-delivery boundary: Main Branch may draft public
+  resource/link playbooks and future scheduling/provider smoke, but refuses
+  comment-to-DM, keyword DM, auto-reply, auto-like, auto-follow, bulk DM, and
+  browser-automation execution on X until a later decision accepts an official
+  tested provider path. Refs #351.
 - Recorded a public-safe partial Postiz scheduling smoke: the REST API endpoint
   and auth path worked, but the tested setup had no connected channels, so
   Postiz remains a candidate rail rather than supported scheduling behavior.
