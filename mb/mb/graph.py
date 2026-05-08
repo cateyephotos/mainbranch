@@ -9,28 +9,16 @@ import subprocess
 import tempfile
 from pathlib import Path
 from typing import Any
-from urllib.parse import urlparse
 
 import yaml
 
 from mb import pushes as pushes_mod
+from mb import relationships
 
 INDEX_VERSION = 1
 EdgeKey = tuple[str, str, str, tuple[tuple[str, str], ...]]
 
-LINK_FIELDS = (
-    "linked_bets",
-    "linked_research",
-    "linked_decision",
-    "linked_decisions",
-    "linked_pushes",
-    "linked_campaigns",
-    "linked_outcomes",
-    "linked_prd",
-    "linked_prds",
-    "related_prds",
-    "supersedes",
-)
+LINK_FIELDS = relationships.RELATIONSHIP_FIELDS
 
 ENTITY_FIELDS = {
     "people": "person",
@@ -62,21 +50,6 @@ ENTITY_TAG_TYPES = {
     "metrics": "metric",
 }
 
-LOCAL_REF_ROOTS = {
-    "bets",
-    "campaigns",
-    "core",
-    "decisions",
-    "docs",
-    "documents",
-    "log",
-    "outputs",
-    "pushes",
-    "reference",
-    "research",
-}
-
-WIKILINK_RE = re.compile(r"(?<!!)\[\[([^\]\n]+)\]\]")
 ENTITY_HASHTAG_RE = re.compile(
     r"(?<![\w/])#("
     + "|".join(sorted(ENTITY_TAG_TYPES))
@@ -126,11 +99,6 @@ def _iter_markdown_files(repo: Path) -> list[Path]:
     ]
 
 
-def _clean_ref(ref: str) -> str:
-    without_anchor = ref.split("#", 1)[0]
-    return without_anchor.split("?", 1)[0].strip()
-
-
 def _coerce_strings(value: Any) -> list[str]:
     if value is None:
         return []
@@ -139,19 +107,6 @@ def _coerce_strings(value: Any) -> list[str]:
     if isinstance(value, list):
         return [item for item in value if isinstance(item, str)]
     return []
-
-
-def _is_external_ref(ref: str) -> bool:
-    parsed = urlparse(ref)
-    if bool(parsed.scheme) or ref.startswith("#"):
-        return True
-    parts = Path(_clean_ref(ref)).parts
-    return (
-        len(parts) > 1
-        and parts[0] not in {".", ".."}
-        and parts[0] not in LOCAL_REF_ROOTS
-        and parts[1] in LOCAL_REF_ROOTS
-    )
 
 
 def _file_id(path: Path, repo: Path) -> str:
@@ -209,10 +164,18 @@ def _add_edge(
     if key in seen_edges:
         return
     seen_edges.add(key)
+    original_field = evidence.get("field") or evidence.get("kind") or edge_type
+    source_path = evidence.get("path")
     edge = {
         "source": source,
         "target": target,
         "type": edge_type,
+        "rel_type": relationships.normalize_relationship(
+            original_field,
+            source_path=source_path,
+            fallback=edge_type,
+        ),
+        "original_field": original_field,
         "evidence": evidence,
     }
     edges.append(edge)
@@ -249,7 +212,7 @@ def _label_for_file(path: Path, repo: Path, frontmatter: dict[str, Any]) -> str:
 
 
 def _resolve_repo_ref(repo: Path, ref: str) -> Path | None:
-    clean_ref = _clean_ref(ref)
+    clean_ref = relationships.clean_ref(ref)
     if not clean_ref:
         return None
     target = (repo / clean_ref).resolve()
@@ -260,12 +223,6 @@ def _resolve_repo_ref(repo: Path, ref: str) -> Path | None:
     return target
 
 
-def _wikilink_target(raw_target: str) -> str:
-    target = raw_target.split("|", 1)[0].strip()
-    target = target.split("#", 1)[0].strip()
-    return target
-
-
 def _resolve_wikilink(
     *,
     repo: Path,
@@ -273,7 +230,7 @@ def _resolve_wikilink(
     files_by_stem: dict[str, list[Path]],
     files_by_rel: dict[str, Path],
 ) -> Path | None:
-    clean = _wikilink_target(target)
+    clean = relationships.wikilink_target(target)
     if not clean:
         return None
     candidates = [clean]
@@ -318,7 +275,7 @@ def _add_reference_edge(
                     "metadata": {},
                 },
             )
-    elif _is_external_ref(ref):
+    elif relationships.is_external_ref(ref):
         target_id = _external_id(ref)
         _add_node(
             nodes,
@@ -369,6 +326,25 @@ def _iter_entity_values(frontmatter: dict[str, Any], body: str) -> list[tuple[st
     return found
 
 
+def _iter_provider_refs(frontmatter: dict[str, Any]) -> list[tuple[str, list[str]]]:
+    provider_refs = frontmatter.get("provider_refs")
+    if not isinstance(provider_refs, dict):
+        return []
+    found: list[tuple[str, list[str]]] = []
+    for provider, refs in provider_refs.items():
+        if not isinstance(provider, str) or not provider.strip():
+            continue
+        ref_kinds: list[str] = []
+        if isinstance(refs, dict):
+            ref_kinds = sorted(str(key) for key in refs if isinstance(key, str))
+        elif isinstance(refs, list):
+            for item in refs:
+                if isinstance(item, dict):
+                    ref_kinds.extend(str(key) for key in item if isinstance(key, str))
+        found.append((provider, sorted(set(ref_kinds))))
+    return found
+
+
 def build_index(path: str) -> dict[str, Any]:
     """Build the machine-readable repo graph index."""
     repo = Path(path).resolve()
@@ -411,7 +387,7 @@ def build_index(path: str) -> dict[str, Any]:
         source_id = _file_id(file_path, repo)
         source_rel = file_path.relative_to(repo).as_posix()
 
-        for field in LINK_FIELDS:
+        for field in relationships.relationship_fields_for_source(source_rel):
             for ref in _coerce_strings(frontmatter.get(field)):
                 _add_reference_edge(
                     repo=repo,
@@ -424,7 +400,9 @@ def build_index(path: str) -> dict[str, Any]:
                     evidence={"kind": "frontmatter", "field": field, "path": source_rel},
                 )
 
-        for match in WIKILINK_RE.finditer(body):
+        body_without_code = relationships.strip_markdown_code(body)
+
+        for match in relationships.WIKILINK_RE.finditer(body_without_code):
             raw_target = match.group(1)
             resolved = _resolve_wikilink(
                 repo=repo,
@@ -433,7 +411,7 @@ def build_index(path: str) -> dict[str, Any]:
                 files_by_rel=files_by_rel,
             )
             if resolved is None:
-                target_ref = _wikilink_target(raw_target)
+                target_ref = relationships.wikilink_target(raw_target)
                 target_id = f"wikilink:{_slug(target_ref)}"
                 _add_node(
                     nodes,
@@ -455,7 +433,78 @@ def build_index(path: str) -> dict[str, Any]:
                 evidence={"kind": "wikilink", "target": raw_target, "path": source_rel},
             )
 
-        for entity_type, value, source in _iter_entity_values(frontmatter, body):
+        for _, raw_target in relationships.iter_markdown_links(body_without_code):
+            clean_target = relationships.markdown_link_target(raw_target)
+            if not clean_target:
+                continue
+            if relationships.is_external_ref(clean_target):
+                target_id = _external_id(clean_target)
+                _add_node(
+                    nodes,
+                    {
+                        "id": target_id,
+                        "type": "external",
+                        "label": clean_target,
+                        "metadata": {"ref": clean_target},
+                    },
+                )
+            elif relationships.is_local_markdown_ref(clean_target):
+                resolved = relationships.resolve_markdown_link(repo, file_path, clean_target)
+                if resolved is None:
+                    target_id = f"missing:{_slug(clean_target)}"
+                    _add_node(
+                        nodes,
+                        {
+                            "id": target_id,
+                            "type": "missing",
+                            "label": clean_target,
+                            "metadata": {"ref": clean_target},
+                        },
+                    )
+                else:
+                    target_id = _file_id(resolved, repo)
+            else:
+                continue
+            _add_edge(
+                edges,
+                seen_edges,
+                source=source_id,
+                target=target_id,
+                edge_type="markdown_link",
+                evidence={"kind": "markdown_link", "target": clean_target, "path": source_rel},
+            )
+
+        for provider, ref_kinds in _iter_provider_refs(frontmatter):
+            target_id = f"provider:{_slug(provider)}"
+            _add_node(
+                nodes,
+                {
+                    "id": target_id,
+                    "type": "provider",
+                    "label": _label_from_value(provider),
+                    "metadata": {
+                        "provider": provider,
+                        "ref_kinds": ref_kinds,
+                        "exposes_raw_values": False,
+                    },
+                },
+            )
+            _add_edge(
+                edges,
+                seen_edges,
+                source=source_id,
+                target=target_id,
+                edge_type="provider_refs",
+                evidence={
+                    "kind": "frontmatter",
+                    "field": "provider_refs",
+                    "path": source_rel,
+                    "provider": provider,
+                    "ref_kinds": ",".join(ref_kinds),
+                },
+            )
+
+        for entity_type, value, source in _iter_entity_values(frontmatter, body_without_code):
             target_id = _entity_id(entity_type, value)
             _add_node(
                 nodes,
@@ -484,6 +533,7 @@ def build_index(path: str) -> dict[str, Any]:
     }
     return {
         "version": INDEX_VERSION,
+        "registry": relationships.registry_payload(),
         "repo": str(repo),
         "nodes": sorted_nodes,
         "edges": sorted_edges,

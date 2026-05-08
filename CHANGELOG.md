@@ -31,6 +31,10 @@ PyPI distribution `mainbranch` tracks the same version sequence.
   severity rubric, public-safe sample review, and harness evidence-template
   pointer so release reviewers distinguish heuristic scoring from manual
   production-behavior review. Refs #379.
+- Added a shared relationship registry to `mb graph --json` and
+  `mb validate --cross-refs`, including normalized relationship types, safe
+  Markdown body-link parsing, push-to-offer checks, and provider-ref graph nodes
+  that expose provider/ref kinds without raw account values. Refs #357.
 - Removed ghost runtime routes from bundled skill and public docs language:
   newsletter/email intent now routes to `/mb-think` and `/mb-organic`, the
   unshipped `/mb-start launch <offer>` form is labeled as future/deferred, and
