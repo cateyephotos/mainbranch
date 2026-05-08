@@ -13,6 +13,9 @@ PyPI distribution `mainbranch` tracks the same version sequence.
 
 ### Added
 
+- Added `mb status` relationship-health JSON and human briefing signals for
+  disconnected bets, pushes, offers, and outcomes so daily status can surface
+  business-loop gaps from graph facts. Refs #358.
 - Added v1 `type: playbook` validation for
   `pushes/<push>/playbooks/<playbook>.md`, including required push linkage,
   provider-boundary, trigger, resource, approval, safe state, validation, and
