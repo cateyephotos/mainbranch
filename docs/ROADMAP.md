@@ -62,8 +62,8 @@ The work clusters into a few durable buckets:
 
 - **Start and status.** `/mb-start`, `/mb-status`, and `mb status` should read
   the same facts: since-last-check changes, ranked next actions, drift,
-  onboarding progress, update severity, provider readiness, GitHub tasks, and
-  recent business activity.
+  onboarding progress, update severity, provider readiness, GitHub
+  tasks/proposals, and recent business activity.
 - **Repair and migration.** `mb doctor`, `mb doctor repair`, `mb update`, and
   `mb migrate` should make stale installs, old repo layouts, broken skill
   wiring, ignored local state, and provider setup problems visible and
@@ -176,5 +176,5 @@ Likely directions:
   sidecar, CLI, MCP server, and provider-adapter judgment.
 - [compatibility.md](compatibility.md) for runtime support status.
 - [CHANGELOG.md](../CHANGELOG.md) for what actually shipped.
-- [GitHub issues](https://github.com/noontide-co/mainbranch/issues) for the
-  live task list.
+- [GitHub issues](https://github.com/noontide-co/mainbranch/issues) for
+  durable public work threads.
