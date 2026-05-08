@@ -5,6 +5,10 @@ push: ../push.md
 platform: google-ads
 provider: google-ads
 provider_boundary: plan-only
+playbook:
+  recipe: google-ads-search-launch
+  author: Noontide
+  source: .claude/playbooks/google-ads-search-launch/SKILL.md
 trigger:
   kind: operator_launch_request
 resource:
@@ -40,16 +44,66 @@ linked_outcomes: []
 - `mb connect plan` / `mb connect doctor --json`:
 - `mb site check`:
 - Account history source:
+- Research files:
+
+## Playbook Defaults And Forks
+
+- Reusable playbook:
+  `.claude/playbooks/google-ads-search-launch/SKILL.md`
+- Conversion path:
+  - [ ] Call/booking
+  - [ ] Stripe/deposit
+  - [ ] Lead form
+  - [ ] Trial/signup
+  - [ ] Other:
+- Geography shape:
+  - [ ] Single city / radius
+  - [ ] Multi-city service area
+  - [ ] Statewide
+  - [ ] National
+  - [ ] Multi-location
+- Defaults used:
+  - [ ] Search only
+  - [ ] Exact/phrase first
+  - [ ] AI Max off
+  - [ ] Final URL Expansion off
+  - [ ] Search Partners off
+  - [ ] Explicit final URL
+  - [ ] Manual provider launch
+- Forks from playbook defaults:
+  - Default:
+  - Fork:
+  - Rationale:
+  - Approved by:
 
 ## Offer And Policy Fit
 
 -
 
-## Lander And Conversion Readiness
+## Existing Account/Campaign Decision
 
 -
 
-## Measurement Chain
+## Readiness
+
+- Lander:
+- Conversion endpoint:
+- Sitelink destinations:
+- Measurement readiness:
+- Provider readiness:
+
+## Budget And Review Window
+
+- Budget cap:
+- Review window:
+- Expected click range:
+- Extension/widening rule:
+
+## Lander And Sitelinks
+
+-
+
+## Measurement Checklist
 
 - GA4 data stream:
 - GTM container:
@@ -59,16 +113,55 @@ linked_outcomes: []
 - GA4 key event:
 - Ads imported primary conversion:
 
+## Market Intent Research
+
+- Buyer/search-intent clusters:
+- Competitor/alternative offers:
+- Customer language:
+- Objections:
+- Proof claims safe to use:
+- Claims to avoid:
+- Bad-fit intent to exclude:
+
+## Core Updates From Research
+
+- Research files created or used:
+- Core files read:
+- Core files updated:
+- Proposed core updates not yet applied:
+  - Target file:
+  - Proposed change:
+  - Evidence:
+  - Approval status:
+- Decisions needed:
+
 ## Campaign Structure
 
 - Goal:
 - Type:
+- Ad groups:
+- Structure rationale:
+
+## Campaign Settings And Forks
+
 - Bidding:
 - Networks:
-- Geo:
+- Geography:
+- Presence / interest setting:
+- Language:
+- Devices:
+- Schedule:
 - AI Max:
 - Final URL Expansion:
-- Ad groups:
+- Search Partners:
+- Display Network:
+- URL options:
+- Settings rationale:
+- Forks from playbook defaults:
+  - Default:
+  - Fork:
+  - Rationale:
+  - Approved by:
 
 ## Keyword Targets
 
@@ -83,13 +176,62 @@ linked_outcomes: []
 - DIY/education:
 - Trust-research terms:
 
-## Ads And Assets
+## RSA Assets
 
-- RSA:
-- Pinned headline:
-- Descriptions under 90 chars:
-- Logo:
+- Final URL:
 - Display path:
+- Headlines:
+  - Text:
+    Rationale:
+    Pin:
+- Descriptions:
+  - Text:
+    Rationale:
+- Character-limit check:
+- Policy/claim check:
+
+## Sitelinks
+
+- Repeat one block per sitelink.
+
+- Sitelink:
+  Text:
+  Description 1:
+  Description 2:
+  Final URL:
+  Job:
+  Destination audit:
+
+## Callouts
+
+- Repeat one block per callout.
+
+- Callout:
+  Text:
+  Rationale:
+  Claim source:
+
+## Structured Snippets
+
+- Repeat one block per structured snippet header.
+
+- Structured snippet:
+  Header:
+  Values:
+  Rationale:
+
+## Skipped Assets And URL Options
+
+- Logo/business name:
+- Image assets:
+- Location assets:
+- Call assets:
+- Lead form assets:
+- Price/promotion assets:
+- Tracking template:
+- Final URL suffix:
+- Custom parameters:
+- Skipped assets and rationale:
 
 ## UI Review Gotchas
 
@@ -104,6 +246,9 @@ linked_outcomes: []
 - [ ] AI Max still off
 - [ ] Dependent headline fragments avoided or pinned
 - [ ] Surface-specific logo set
+- [ ] Sitelink destinations audited
+- [ ] Callout claims verified
+- [ ] Structured snippet values supported by the offer/lander
 - [ ] Ad approval state checked before diagnosing zero impressions
 
 ## Manual Provider Steps
@@ -118,20 +263,15 @@ linked_outcomes: []
 - [ ] Campaign structure reviewed
 - [ ] Keywords and negatives reviewed
 - [ ] Ad copy/assets reviewed
+- [ ] Playbook forks reviewed
+- [ ] Skipped assets reviewed
 - [ ] Billing and budget reviewed
 - [ ] GA4 to Ads link reviewed
 - [ ] Primary conversion import reviewed
 - [ ] Network, geo, AI Max, and Final URL Expansion reviewed
 - [ ] Launch/unpause approved
 
-## Budget And Review Window
-
-- Budget cap:
-- Review window:
-- Expected click range:
-- Extension/widening rule:
-
-## Review Decision
+## Review Loop
 
 - Continue/change/stop:
 - Outcome/log link:
