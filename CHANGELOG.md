@@ -42,6 +42,22 @@ PyPI distribution `mainbranch` tracks the same version sequence.
   durable business truth, active bets, execution work, proof, legacy
   compatibility files, and linked operating-boundary repos before routing or
   spawning agents. Refs #410.
+- Added Google Ads campaign-plan guidance for `/mb-ads`, including
+  offer/policy-fit routing, existing-campaign rescue decisions, account-history
+  inputs, `mb connect`/provider-tool boundary checks, keyword and negative-list
+  planning, site/conversion readiness, approval gates, and a sanitized
+  plan-only push playbook fixture. Refs #414.
+- Added the first reusable Google Ads Search launch playbook skeleton under
+  `.claude/playbooks/`, with Noontide's paid-search proof-run approach and a
+  push-playbook run template. Refs #414.
+- Added B2B local-services Google Ads field notes to the reusable Search launch
+  playbook, covering GA4/GTM/Ads import order, Search-only campaign defaults,
+  UI gotchas, negative-keyword categories, manual gates, and validation-window
+  calibration. Refs #422.
+- Expanded the Google Ads Search launch playbook with measurement-chain gotchas
+  from the related operator repo launch notes: explicit form-success events,
+  GTM Preview verification, GA4 Realtime/admin lag, and Google Ads conversion
+  import UI variants. Refs #414, #422.
 
 ### Changed
 
