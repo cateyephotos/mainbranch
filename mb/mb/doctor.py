@@ -26,6 +26,7 @@ from mb import connect as connect_mod
 from mb import engine as engine_mod
 from mb import graph as graph_mod
 from mb import migrate as migrate_mod
+from mb import migration_lint
 from mb import onboard as onboard_mod
 from mb import validate as validate_mod
 from mb.engine import install_mode, link_status
@@ -1097,9 +1098,41 @@ def _repair_legacy_claude_symlinks(repo: Path, findings: list[dict[str, Any]]) -
     }
 
 
-def _validation_summary(repo: Path) -> dict[str, Any]:
+def _migration_drift_from_checks(
+    checks: list[dict[str, Any]],
+    repo: Path,
+) -> dict[str, Any] | None:
+    check = next((item for item in checks if item.get("name") == "migration-drift"), None)
+    if check is None:
+        return None
+    findings = check.get("findings", [])
+    if not isinstance(findings, list):
+        findings = []
+    summary = check.get("summary")
+    if not isinstance(summary, dict):
+        summary = {
+            "warnings": len(findings),
+            "categories": sorted({str(item.get("category")) for item in findings}),
+        }
+    return {
+        "ok": not findings,
+        "repo": str(repo),
+        "findings": findings,
+        "summary": summary,
+    }
+
+
+def _validation_summary(
+    repo: Path,
+    *,
+    migration_drift_report: dict[str, Any] | None = None,
+) -> dict[str, Any]:
     try:
-        report = validate_mod.run(str(repo), cross_refs=True)
+        report = validate_mod.run(
+            str(repo),
+            cross_refs=True,
+            migration_drift_report=migration_drift_report,
+        )
     except Exception as exc:  # pragma: no cover - defensive CLI boundary
         return {
             "ok": False,
@@ -1124,6 +1157,7 @@ def _validation_summary(repo: Path) -> dict[str, Any]:
                 "warnings": len(report.get("cross_refs", {}).get("warnings", [])),
                 "orphan_offers": len(report.get("cross_refs", {}).get("orphan_offers", [])),
             },
+            "migration_drift": report.get("migration_drift", {}).get("summary", {}),
         },
     }
 
@@ -1261,6 +1295,25 @@ def run(path: str) -> dict[str, Any]:
     checks.append(_repo_layout_check(repo))
     checks.append(_schema_version_check(repo))
     checks.append(_legacy_campaigns_check(repo))
+    drift = migration_lint.run(repo)
+    checks.append(
+        {
+            "name": "migration-drift",
+            "ok": bool(drift["ok"]),
+            "detail": (
+                "no migration-shape drift found"
+                if drift["ok"]
+                else (
+                    f"{drift['summary']['warnings']} migration drift warning(s): "
+                    + ", ".join(drift["summary"]["categories"])
+                )
+            ),
+            "severity": "ok" if drift["ok"] else "warn",
+            "findings": drift["findings"],
+            "summary": drift["summary"],
+            "safe_to_share": True,
+        }
+    )
     checkpoint_hook = checkpoint_mod.hook_status(repo)
     hook_state = str(checkpoint_hook.get("state"))
     checks.append(
@@ -1387,6 +1440,9 @@ def repair_plan(
     )
 
     migration = migrate_mod.check(target, include_diff=False)
+    migration_drift = _migration_drift_from_checks(
+        doctor_report["checks"], target
+    ) or migration_lint.run(target)
     reference_state = _legacy_reference_state(target)
     offer_topology = _offer_topology_state(target)
     legacy_vip = _legacy_vip_audit_state(target)
@@ -1461,6 +1517,50 @@ def repair_plan(
             _max_state([str(item["state"]) for item in layout_checks]),
             f"schema {migration.get('current_version')} -> {migration.get('latest_version')}",
             checks=layout_checks,
+        )
+    )
+
+    drift_actions: list[dict[str, Any]] = []
+    if migration_drift["findings"]:
+        action = _action(
+            id="migration-drift-review",
+            title="Review business repo migration drift",
+            state="warn",
+            mode="manual",
+            command="mb doctor repair --plan --json && mb validate --json",
+            safe_to_apply=False,
+            reason=(
+                "migration drift warnings name stale paths and categories without "
+                "copying private file contents; operators should approve moves or "
+                "frontmatter repairs explicitly"
+            ),
+        )
+        actions.append(action)
+        drift_actions.append(action)
+    sections.append(
+        _section(
+            "migration-drift",
+            "Migration Drift Lint",
+            "warn" if migration_drift["findings"] else "ok",
+            (
+                f"{migration_drift['summary']['warnings']} warning(s): "
+                + ", ".join(migration_drift["summary"]["categories"])
+                if migration_drift["findings"]
+                else "no legacy active-write or stale runtime guidance drift found"
+            ),
+            checks=[
+                {
+                    "name": str(item["code"]),
+                    "state": "warn",
+                    "summary": str(item["message"]),
+                    "path": str(item["path"]),
+                    "category": str(item["category"]),
+                    "repair_command": str(item["repair_command"]),
+                    "content_included": False,
+                }
+                for item in migration_drift["findings"]
+            ],
+            actions=drift_actions,
         )
     )
 
@@ -1754,7 +1854,7 @@ def repair_plan(
         )
     )
 
-    validation = _validation_summary(target)
+    validation = _validation_summary(target, migration_drift_report=migration_drift)
     if validation["state"] != "ok":
         actions.append(
             _action(
@@ -1864,6 +1964,7 @@ def repair_plan(
         "raw": {
             "migration": migration,
             "legacy_reference": reference_state,
+            "migration_drift": migration_drift,
             "offer_topology": offer_topology,
             "legacy_vip": legacy_vip,
             "legacy_claude_links": legacy_links,

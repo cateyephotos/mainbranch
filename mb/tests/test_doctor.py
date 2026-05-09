@@ -8,6 +8,7 @@ from pathlib import Path
 from typer.testing import CliRunner
 
 from mb import doctor as doctor_mod
+from mb import migration_lint
 from mb.cli import app
 from mb.doctor import _detect_cloud_paths, _repo_layout_check, run
 from mb.init import run as init_run
@@ -396,6 +397,118 @@ def test_doctor_repair_plan_exposes_legacy_campaigns_to_pushes_action(tmp_path: 
         check for check in repo_shape["checks"] if check["name"] == "legacy-campaigns"
     )
     assert legacy_check["state"] == "warn"
+
+
+def test_doctor_repair_plan_reports_stale_generated_guidance_privately(
+    tmp_path: Path,
+) -> None:
+    repo = tmp_path / "stale-guidance"
+    init_run(path=str(repo), name="Acme")
+    (repo / "CLAUDE.md").write_text(
+        "\n".join(
+            [
+                "# Acme",
+                "",
+                "## Folders",
+                "",
+                "- `reference/` - current business memory and active write target",
+                "- `campaigns/` - current coordinated work",
+                "",
+                "Private customer note that should never appear in lint output.",
+            ]
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+
+    result = runner.invoke(app, ["doctor", "repair", "--repo", str(repo), "--plan", "--json"])
+
+    assert result.exit_code in {0, 1}
+    payload = json.loads(result.stdout)
+    section = next(section for section in payload["sections"] if section["id"] == "migration-drift")
+    assert section["state"] == "warn"
+    checks = {check["name"]: check for check in section["checks"]}
+    assert "stale-claude-reference-guidance" in checks
+    assert "stale-claude-campaigns-guidance" in checks
+    assert checks["stale-claude-reference-guidance"]["content_included"] is False
+    assert "Private customer note" not in result.stdout
+    actions = {action["id"]: action for action in payload["actions"]}
+    assert actions["migration-drift-review"]["mode"] == "manual"
+    assert actions["migration-drift-review"]["safe_to_apply"] is False
+
+
+def test_doctor_repair_plan_reports_migration_shape_drift(tmp_path: Path) -> None:
+    repo = tmp_path / "shape-drift"
+    init_run(path=str(repo), name="Acme")
+    (repo / "reference" / "core").mkdir(parents=True)
+    (repo / "reference" / "core" / "offer.md").write_text("# Legacy offer\n", encoding="utf-8")
+    (repo / ".vip").mkdir()
+    (repo / ".vip" / "config.yaml").write_text(
+        "reference_structure:\n  core: reference/core\n",
+        encoding="utf-8",
+    )
+    legacy = repo / "campaigns" / "2026-04-launch"
+    legacy.mkdir(parents=True)
+    (legacy / "campaign.md").write_text(
+        "---\nslug: launch\nstatus: active\n---\n# Launch\n",
+        encoding="utf-8",
+    )
+    wrong_push = repo / "pushes" / "launch" / "push.md"
+    wrong_push.parent.mkdir(parents=True)
+    wrong_push.write_text(
+        (
+            "---\n"
+            "type: push\n"
+            "slug: launch\n"
+            "kind: launch\n"
+            "status: active\n"
+            "health: unknown\n"
+            "goal: {}\n"
+            "owner: Devon\n"
+            "audience: buyers\n"
+            "offer: offer\n"
+            "promise: promise\n"
+            "---\n"
+            "# Push\n"
+        ),
+        encoding="utf-8",
+    )
+
+    result = runner.invoke(app, ["doctor", "repair", "--repo", str(repo), "--plan", "--json"])
+
+    assert result.exit_code in {0, 1}
+    payload = json.loads(result.stdout)
+    section = next(section for section in payload["sections"] if section["id"] == "migration-drift")
+    codes = {check["name"] for check in section["checks"]}
+    assert "legacy-reference-active-content" in codes
+    assert "legacy-campaigns-active-content" in codes
+    assert "legacy-vip-config" in codes
+    assert "push-record-wrong-shape" in codes
+
+
+def test_doctor_repair_plan_reuses_migration_drift_report(
+    tmp_path: Path,
+    monkeypatch,
+) -> None:
+    repo = tmp_path / "reuse-drift"
+    init_run(path=str(repo), name="Acme")
+    calls = 0
+
+    def fake_lint(path: Path) -> dict[str, object]:
+        nonlocal calls
+        calls += 1
+        return {
+            "ok": True,
+            "repo": str(path),
+            "findings": [],
+            "summary": {"warnings": 0, "categories": []},
+        }
+
+    monkeypatch.setattr(migration_lint, "run", fake_lint)
+
+    doctor_mod.repair_plan(repo)
+
+    assert calls == 1
 
 
 def test_doctor_repair_plan_exposes_reference_split_truth(tmp_path: Path) -> None:
