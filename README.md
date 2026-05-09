@@ -33,7 +33,7 @@ Open source. Lives on your machine. Bring your own Claude Code plan. That's it.
 ---
 
 <div align="center">
-  <em>Works with</em> <strong>Claude Code today</strong>. Codex, Cursor, OpenClaw, Hermes, and local runtimes are compatibility targets, not supported yet — see <a href="docs/compatibility.md">compatibility</a>.
+  <em>Works with</em> <strong>Claude Code today</strong>. Codex CLI has an experimental CLI-first adapter for power users; Cursor, OpenClaw, Hermes, and local runtimes remain compatibility targets — see <a href="docs/compatibility.md">compatibility</a>.
 </div>
 
 ---
@@ -146,6 +146,38 @@ claude
 ```
 
 You'll need a Claude plan that includes Claude Code. Install Claude Code from [claude.ai](https://claude.ai). Step-by-step beginner walkthrough: [docs/BEGINNER-SETUP.md](docs/BEGINNER-SETUP.md).
+
+### Trying Codex CLI
+
+Codex CLI support is experimental and CLI-first. Fresh business folders include
+an `AGENTS.md` file that tells Codex how to start from Main Branch facts. Expect
+Codex to run `mb status --json --peek`, `mb start --json`, and
+`mb doctor repair --plan`, then translate those facts into a useful owner
+briefing. Do not expect Claude Code slash commands such as `/mb-start` to work
+inside Codex yet.
+
+After installing Codex CLI, test a new repo with:
+
+```bash
+mb onboard --yes --name "Codex Smoke Business" --path codex-smoke-business
+cd codex-smoke-business
+codex
+```
+
+Ask Codex to start the business day from read-only `mb` facts and to ask before
+writing files.
+
+For a read-only smoke test:
+
+```bash
+codex exec --json --ephemeral --sandbox read-only -c 'approval_policy="never"' -C . \
+  'Start this Main Branch business day. Run only read-only mb checks and do not edit files.'
+git status --short
+```
+
+The smoke passes when Codex uses the `mb` fact commands and `git status --short`
+stays clean. See [docs/compatibility.md](docs/compatibility.md) for the current
+support boundary.
 
 Tested on macOS and Linux. Windows is experimental — use WSL2.
 
