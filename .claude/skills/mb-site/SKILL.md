@@ -176,6 +176,15 @@ If the operator cannot articulate the shape, ask: "What goal are you trying to h
 - [`references/frontend-design.md`](references/frontend-design.md) - website typography, color, motion.
 - [`references/section-patterns.md`](references/section-patterns.md) - website section catalog.
 
+**Visibility, hosting, and checks**
+
+- Site repos default to **private**. Before creating a public site repo,
+  ask one visibility question — see the engine docs
+  (repo-visibility-rubric) for the rule and exact wording.
+- Cloudflare is the deploy rail. GitHub Pages is not part of normal Main
+  Branch setup; the checks-and-review model in the engine docs explains
+  how local `mb` checks, GitHub Actions, and branch protection layer.
+
 **Setup, examples, help**
 
 - [`references/naming-heuristic.md`](references/naming-heuristic.md) - domain naming playbook.
