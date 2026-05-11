@@ -125,6 +125,81 @@ def _looks_like_mainbranch_repo(repo: Path) -> dict[str, Any]:
     }
 
 
+def _detect_default_branch(repo: Path) -> str:
+    """Return the repo's default branch, falling back to common names."""
+    symbolic = _run_command(
+        ["git", "symbolic-ref", "--quiet", "--short", "refs/remotes/origin/HEAD"],
+        cwd=repo,
+    )
+    if symbolic["ok"]:
+        raw = str(symbolic["stdout"]).strip()
+        if raw.startswith("origin/"):
+            return raw[len("origin/") :]
+        if raw:
+            return raw
+    for candidate in ("main", "master"):
+        exists = _run_command(
+            ["git", "show-ref", "--verify", "--quiet", f"refs/heads/{candidate}"],
+            cwd=repo,
+        )
+        if exists["ok"]:
+            return candidate
+    return ""
+
+
+def _classify_workflow(
+    *,
+    branch: str,
+    is_linked_worktree: bool,
+    default_branch: str,
+) -> str:
+    """Classify an in-worktree checkout. Callers must ensure they are inside a
+    git work tree before calling — `_git_info` short-circuits the non-worktree
+    case before reaching this helper.
+    """
+    if not branch:
+        return "detached"
+    if is_linked_worktree:
+        return "worktree"
+    if default_branch and branch == default_branch:
+        return "solo-on-main"
+    return "branch"
+
+
+def _build_git_summary(
+    *,
+    workflow_mode: str,
+    branch: str,
+    default_branch: str,
+    dirty_count: int,
+    ahead: int | None,
+    behind: int | None,
+) -> str:
+    if workflow_mode == "detached":
+        return "HEAD is detached. Check out a branch before saving."
+    if not workflow_mode:
+        return ""
+
+    if workflow_mode == "solo-on-main":
+        label = f"On {branch or default_branch or 'main'}"
+    elif workflow_mode == "worktree":
+        label = f"In a worktree on `{branch}`" if branch else "In a worktree"
+    else:
+        label = f"On branch `{branch}`"
+
+    parts: list[str] = [label]
+    if dirty_count:
+        plural = "" if dirty_count == 1 else "s"
+        parts.append(f"with {dirty_count} uncommitted file{plural}")
+    else:
+        parts.append("with no uncommitted changes")
+    if ahead:
+        parts.append(f"ahead by {ahead}")
+    if behind:
+        parts.append(f"behind by {behind}")
+    return " ".join(parts) + "."
+
+
 def _git_info(repo: Path) -> dict[str, Any]:
     if not _which("git"):
         return {"available": False, "inside_work_tree": False, "error": "git not on PATH"}
@@ -142,18 +217,80 @@ def _git_info(repo: Path) -> dict[str, Any]:
     status = _run_command(["git", "status", "--porcelain"], cwd=repo)
     remote = _run_command(["git", "config", "--get", "remote.origin.url"], cwd=repo)
 
+    branch_name = branch["stdout"].strip() if branch["ok"] else ""
     dirty_lines = (
         [line for line in status["stdout"].splitlines() if line.strip()] if status["ok"] else []
     )
+
+    git_dir = _run_command(["git", "rev-parse", "--git-dir"], cwd=repo)
+    common_dir = _run_command(["git", "rev-parse", "--git-common-dir"], cwd=repo)
+    # Linked worktrees report git-dir under .git/worktrees/<name>/ while
+    # git-common-dir points at the shared .git directory. Git can emit either
+    # path as relative or absolute depending on context, so resolve both
+    # against `repo` before comparing instead of doing raw string inequality.
+    is_linked_worktree = False
+    if git_dir["ok"] and common_dir["ok"]:
+        git_dir_path = (repo / git_dir["stdout"].strip()).resolve()
+        common_dir_path = (repo / common_dir["stdout"].strip()).resolve()
+        is_linked_worktree = git_dir_path != common_dir_path
+    worktree_root = ""
+    if is_linked_worktree:
+        toplevel = _run_command(["git", "rev-parse", "--show-toplevel"], cwd=repo)
+        if toplevel["ok"]:
+            worktree_root = toplevel["stdout"].strip()
+
+    default_branch = _detect_default_branch(repo)
+    workflow_mode = _classify_workflow(
+        branch=branch_name,
+        is_linked_worktree=is_linked_worktree,
+        default_branch=default_branch,
+    )
+
+    upstream_ref = ""
+    ahead: int | None = None
+    behind: int | None = None
+    if branch_name:
+        upstream = _run_command(
+            ["git", "rev-parse", "--abbrev-ref", "--symbolic-full-name", "@{u}"],
+            cwd=repo,
+        )
+        if upstream["ok"]:
+            upstream_ref = upstream["stdout"].strip()
+            counts = _run_command(
+                ["git", "rev-list", "--left-right", "--count", f"HEAD...{upstream_ref}"],
+                cwd=repo,
+            )
+            if counts["ok"]:
+                parts = counts["stdout"].split()
+                if len(parts) == 2 and parts[0].isdigit() and parts[1].isdigit():
+                    ahead = int(parts[0])
+                    behind = int(parts[1])
+
+    summary = _build_git_summary(
+        workflow_mode=workflow_mode,
+        branch=branch_name,
+        default_branch=default_branch,
+        dirty_count=len(dirty_lines),
+        ahead=ahead,
+        behind=behind,
+    )
+
     return {
         "available": True,
         "inside_work_tree": True,
-        "branch": branch["stdout"].strip() if branch["ok"] else "",
+        "branch": branch_name,
         "commit": commit["stdout"].strip() if commit["ok"] else "",
         "dirty": bool(dirty_lines),
         "dirty_count": len(dirty_lines),
         "dirty_files": dirty_lines[:10],
         "remote": remote["stdout"].strip() if remote["ok"] else "",
+        "workflow_mode": workflow_mode,
+        "default_branch": default_branch,
+        "upstream": upstream_ref,
+        "ahead": ahead,
+        "behind": behind,
+        "worktree_root": worktree_root,
+        "summary": summary,
         "error": "" if status["ok"] else status["stderr"].strip(),
     }
 

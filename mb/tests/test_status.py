@@ -1897,3 +1897,175 @@ def test_status_human_output_mentions_business_map(tmp_path: Path, monkeypatch) 
     loud = runner.invoke(app, ["status", str(repo), "--verbose"])
     assert loud.exit_code == 0
     assert "Business map" in loud.stdout
+
+
+def test_classify_workflow_covers_known_states() -> None:
+    assert (
+        status_mod._classify_workflow(
+            branch="",
+            is_linked_worktree=False,
+            default_branch="main",
+        )
+        == "detached"
+    )
+    assert (
+        status_mod._classify_workflow(
+            branch="main",
+            is_linked_worktree=False,
+            default_branch="main",
+        )
+        == "solo-on-main"
+    )
+    assert (
+        status_mod._classify_workflow(
+            branch="feature/x",
+            is_linked_worktree=False,
+            default_branch="main",
+        )
+        == "branch"
+    )
+    assert (
+        status_mod._classify_workflow(
+            branch="feature/x",
+            is_linked_worktree=True,
+            default_branch="main",
+        )
+        == "worktree"
+    )
+
+
+def test_build_git_summary_reads_in_business_language() -> None:
+    on_main = status_mod._build_git_summary(
+        workflow_mode="solo-on-main",
+        branch="main",
+        default_branch="main",
+        dirty_count=0,
+        ahead=None,
+        behind=None,
+    )
+    assert "On main" in on_main
+    assert "no uncommitted changes" in on_main
+
+    on_branch = status_mod._build_git_summary(
+        workflow_mode="branch",
+        branch="feature/x",
+        default_branch="main",
+        dirty_count=3,
+        ahead=2,
+        behind=1,
+    )
+    assert "On branch `feature/x`" in on_branch
+    assert "3 uncommitted files" in on_branch
+    assert "ahead by 2" in on_branch
+    assert "behind by 1" in on_branch
+
+    detached = status_mod._build_git_summary(
+        workflow_mode="detached",
+        branch="",
+        default_branch="main",
+        dirty_count=0,
+        ahead=None,
+        behind=None,
+    )
+    assert "detached" in detached.lower()
+
+
+def test_git_info_solo_on_main_without_remote(tmp_path: Path) -> None:
+    """Local repo on the default branch with no `origin` remote should still
+    classify as solo-on-main, leave ahead/behind null, and produce a clear
+    summary. Locks the contract for the most common existing-repo state."""
+    repo = tmp_path / "solo"
+    repo.mkdir()
+    assert _git(repo, "init", "-b", "main").returncode == 0
+    _configure_git_user(repo)
+    _commit(repo, "README.md", "hello\n", "[add] readme")
+
+    info = status_mod._git_info(repo)
+    assert info["inside_work_tree"] is True
+    assert info["branch"] == "main"
+    assert info["workflow_mode"] == "solo-on-main"
+    assert info["default_branch"] == "main"
+    assert info["dirty"] is False
+    assert info["remote"] == ""
+    assert info["upstream"] == ""
+    assert info["ahead"] is None
+    assert info["behind"] is None
+    assert info["summary"]
+    assert "main" in info["summary"]
+    assert "uncommitted" in info["summary"]
+
+
+def test_git_info_branch_without_upstream(tmp_path: Path) -> None:
+    """Feature branch with no upstream should classify as branch, leave
+    ahead/behind null, and reference the branch name in the summary.
+    Common state when an operator starts work but hasn't pushed yet."""
+    repo = tmp_path / "branched"
+    repo.mkdir()
+    assert _git(repo, "init", "-b", "main").returncode == 0
+    _configure_git_user(repo)
+    _commit(repo, "README.md", "hello\n", "[add] readme")
+    assert _git(repo, "checkout", "-b", "feature/x").returncode == 0
+
+    info = status_mod._git_info(repo)
+    assert info["branch"] == "feature/x"
+    assert info["workflow_mode"] == "branch"
+    assert info["default_branch"] == "main"
+    assert info["upstream"] == ""
+    assert info["ahead"] is None
+    assert info["behind"] is None
+    assert "feature/x" in info["summary"]
+
+
+def test_git_info_handles_non_git_directory(tmp_path: Path) -> None:
+    info = status_mod._git_info(tmp_path)
+    # Either git is missing or this is not a work tree; either way no workflow.
+    assert info.get("inside_work_tree") in (False, None)
+    assert "workflow_mode" not in info or info.get("workflow_mode") in ("", None)
+
+
+def test_status_ranked_actions_always_carry_audience_and_summary(
+    tmp_path: Path, monkeypatch
+) -> None:
+    """Every ranked action emitted by `mb status` must have a valid audience
+    and a non-empty operator_summary, so skills can route on the field
+    without re-deriving from schema language."""
+    monkeypatch.setattr(status_mod, "_which", _without_github_or_claude)
+    repo = tmp_path / "fresh"
+    init_run(path=str(repo), name="Fresh")
+
+    payload = status_mod.run(
+        path=str(repo),
+        now=datetime(2026, 5, 4, 12, 0, tzinfo=timezone.utc),
+        update_marker=False,
+    )
+
+    actions = payload["ranked_actions"]
+    assert actions, "expected at least one ranked action on a fresh repo"
+    valid_audiences = {"mechanical", "operator_decision", "informational"}
+    for action in actions:
+        assert action["audience"] in valid_audiences, (
+            f"action {action['id']} has invalid audience: {action['audience']!r}"
+        )
+        assert action["operator_summary"], f"action {action['id']} has empty operator_summary"
+
+
+def test_git_info_detects_linked_worktree(tmp_path: Path) -> None:
+    """Conductor workspaces and `git worktree add` checkouts should report
+    workflow_mode='worktree' and a populated worktree_root."""
+    main_repo = tmp_path / "main"
+    main_repo.mkdir()
+    assert _git(main_repo, "init", "-b", "main").returncode == 0
+    _configure_git_user(main_repo)
+    _commit(main_repo, "README.md", "hello\n", "[add] readme")
+
+    worktree_path = tmp_path / "wt-feature"
+    add = _git(main_repo, "worktree", "add", "-b", "feature/x", str(worktree_path))
+    assert add.returncode == 0, add.stderr
+
+    info = status_mod._git_info(worktree_path)
+    assert info["inside_work_tree"] is True
+    assert info["workflow_mode"] == "worktree"
+    assert info["branch"] == "feature/x"
+    assert info["default_branch"] == "main"
+    assert info["worktree_root"] == str(worktree_path.resolve())
+    assert "worktree" in info["summary"].lower()
