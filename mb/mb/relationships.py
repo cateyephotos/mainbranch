@@ -15,6 +15,7 @@ LOCAL_REF_ROOTS = {
     "bets",
     "campaigns",
     "core",
+    "data",
     "decisions",
     "docs",
     "documents",
@@ -22,6 +23,7 @@ LOCAL_REF_ROOTS = {
     "outputs",
     "pushes",
     "reference",
+    "reports",
     "research",
 }
 
@@ -110,6 +112,14 @@ RELATIONSHIPS: tuple[Relationship, ...] = (
         fields=("linked_prds", "linked_prd", "related_prds"),
         description="Connects a file to PRDs or product direction docs.",
         legacy=True,
+    ),
+    Relationship(
+        canonical_type="data_source",
+        fields=("linked_data_sources",),
+        description=(
+            "Connects a file to a data-source record (data/<provider>/source.md) "
+            "that describes provider, owner, privacy, cadence, storage, and reports."
+        ),
     ),
     Relationship(
         canonical_type="supersedes",
