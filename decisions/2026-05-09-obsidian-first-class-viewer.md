@@ -64,11 +64,13 @@ The relevant Obsidian behavior that makes this work:
   cross-tool.
 
 These constraints decide the convention. Typed edges in frontmatter
-remain canonical. A body `## Related links` section is a viewer mirror
+remain the source of truth. A body `## Related links` section is a viewer mirror
 only — it exists so Obsidian, GitHub, and humans can browse
 relationships without `mb` changing its graph model. If frontmatter and
-body mirrors disagree, frontmatter wins; future validation or doctor
-tooling may warn when the mirror is out of date and offer to repair it.
+body mirrors disagree, frontmatter wins. `mb validate --cross-refs` can
+warn when the mirror is out of date, and `mb doctor repair` can preview and
+apply missing mirror links from frontmatter after operator
+approval.
 See [Markdown link conventions](../docs/markdown-link-conventions.md)
 for the link-form rules.
 
@@ -92,7 +94,7 @@ follow-up at most, never a requirement.
   and the official Obsidian CLI (v1.12+, 2026-02) are interesting future
   integration surfaces but are not part of this decision.
 - A change to the `linked_*` frontmatter contract. Repo-relative paths
-  with `.md` extensions remain canonical. No switch to wikilink-typed
+  with `.md` extensions remain the source of truth. No switch to wikilink-typed
   frontmatter.
 
 ## Consequences
@@ -112,9 +114,9 @@ follow-up at most, never a requirement.
   sits adjacent to the existing graph-link authoring assistance ticket
   and stays optional.
 - Body mirrors are derived browsing aids, not authoritative graph data.
-  Future validation or doctor tooling may warn when canonical frontmatter
-  links are missing from a file's body mirror, but graph correctness
-  remains based on structured frontmatter.
+  Validation and doctor repair may warn and add missing mirror links when
+  frontmatter links are absent from `## Related links`, but graph
+  correctness remains based on structured frontmatter.
 
 ## Validation
 

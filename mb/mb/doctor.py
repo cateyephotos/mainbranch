@@ -29,6 +29,7 @@ from mb import graph as graph_mod
 from mb import migrate as migrate_mod
 from mb import migration_lint
 from mb import onboard as onboard_mod
+from mb import related_links as related_links_mod
 from mb import topology as topology_mod
 from mb import validate as validate_mod
 from mb.engine import install_mode, link_status
@@ -2058,7 +2059,31 @@ def repair_plan(
     )
 
     validation = _validation_summary(target, migration_drift_report=migration_drift)
-    if validation["state"] != "ok":
+    related_links = related_links_mod.plan(target)
+    related_actions: list[dict[str, Any]] = []
+    if related_links["summary"]["missing_links"]:
+        action = _action(
+            id="related-links-mirror",
+            title="Mirror frontmatter links into Related links",
+            state="warn",
+            mode="write",
+            command="mb doctor repair --apply",
+            safe_to_apply=True,
+            reason=(
+                "frontmatter stays canonical; doctor only adds missing body-level "
+                "Markdown links for GitHub, Obsidian, and human browsing"
+            ),
+            writes=[str(item["path"]) for item in related_links["files"]],
+        )
+        actions.append(action)
+        related_actions.append(action)
+    validation_categories = (
+        validation.get("report", {}).get("validation_categories", {}).get("by_category", {})
+    )
+    only_related_link_warnings = set(validation_categories) == {
+        related_links_mod.MISSING_RELATED_LINK_MIRROR_CATEGORY
+    }
+    if validation["state"] != "ok" and not only_related_link_warnings:
         actions.append(
             _action(
                 id="validate-frontmatter",
@@ -2077,6 +2102,31 @@ def repair_plan(
             validation["state"],
             validation["summary"],
             checks=[{"name": "mb validate --cross-refs", **validation}],
+        )
+    )
+
+    sections.append(
+        _section(
+            "related-links",
+            "Related Links Mirrors",
+            "warn" if related_links["summary"]["missing_links"] else "ok",
+            (
+                f"{related_links['summary']['missing_links']} frontmatter link(s) missing "
+                f"from {related_links['summary']['files']} Related links section(s)"
+                if related_links["summary"]["missing_links"]
+                else "Related links mirrors match frontmatter"
+            ),
+            checks=[
+                {
+                    "name": str(item["path"]),
+                    "state": "warn",
+                    "summary": f"{len(item['missing'])} missing mirror link(s)",
+                    "missing": item["missing"],
+                    "content_included": False,
+                }
+                for item in related_links["files"]
+            ],
+            actions=related_actions,
         )
     )
 
@@ -2152,6 +2202,7 @@ def repair_plan(
         "post_apply": {
             "structural_verification": "mb doctor repair --plan --json",
             "validation_frontmatter_debt": "mb validate --cross-refs",
+            "related_links_mirrors": "mb doctor repair --plan --json",
             "runtime_smoke_required": (
                 "Static repair does not prove Claude Code runtime behavior. "
                 "From the business repo, run `claude`, confirm `/mb-start` is discoverable, "
@@ -2174,6 +2225,7 @@ def repair_plan(
             "legacy_vip": legacy_vip,
             "legacy_claude_links": legacy_links,
             "validation": validation.get("report", {}),
+            "related_links": related_links,
             "graph": graph.get("report", {}),
             "git": git,
         },
@@ -2310,6 +2362,26 @@ def repair_apply(repo: str | Path = ".", *, include_migration: bool = False) -> 
                 writes=["AGENTS.md"],
                 applied=bool(agents["changed"]),
                 result=agents,
+            )
+        )
+
+    related_links_result = related_links_mod.apply(target)
+    if related_links_result["changed"] or related_links_result["errors"]:
+        applied.append(
+            _action(
+                id="related-links-mirror",
+                title="Mirrored frontmatter links into Related links",
+                state="ok" if related_links_result["ok"] else "error",
+                mode="write",
+                command="mb doctor repair --apply",
+                safe_to_apply=True,
+                reason=(
+                    "added missing Markdown body links from frontmatter; "
+                    "frontmatter remains authoritative"
+                ),
+                writes=[str(item["path"]) for item in related_links_result["changed"]],
+                applied=bool(related_links_result["changed"]),
+                result=related_links_result,
             )
         )
 
