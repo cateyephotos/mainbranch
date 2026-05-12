@@ -569,9 +569,9 @@ status: complete
 
 ## This Repo
 
-This is the **data repo** (knowledge base) for [Business Name].
+This is the **business repo** (operating memory) for [Business Name].
 
-It uses [Main Branch](https://github.com/noontide-co/mainbranch) as the **engine** — skills, lenses, and frameworks that generate content from your data.
+It uses [Main Branch](https://github.com/noontide-co/mainbranch) as the **engine** — skills, lenses, and frameworks that generate content from your business files.
 
 ### Setup
 
@@ -587,10 +587,10 @@ It uses [Main Branch](https://github.com/noontide-co/mainbranch) as the **engine
 ### How It Works
 
 ```
-ENGINE (mainbranch)     +     DATA (this repo)     =     OUTPUT
-├── Skills                             ├── core/                 ├── Ads
-├── Lenses                             ├── research/             ├── Emails
-└── Pull updates, don't edit           └── You own this          └── Content
+MAIN BRANCH ENGINE     +     BUSINESS REPO CONTEXT     =     BUSINESS OUTPUT
+├── Skills                         ├── core/                 ├── Ads
+├── Lenses                         ├── research/             ├── Emails
+└── Update through mb              └── You own this          └── Content
 ```
 
 Skills from the engine read your `core/`, `research/`, and `decisions/` files

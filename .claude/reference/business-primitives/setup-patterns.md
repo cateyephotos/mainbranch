@@ -103,8 +103,8 @@ interest, consideration, conversion, onboarding, engagement, and retention.
 landing pages, email sequences, sales pages, checkout, and onboarding.
 
 `core/operations/funnel/skool-surfaces.md` stores live about-page and pricing
-card copy for congruence checks across `/mb-ads`, `/mb-organic`, `/mb-vsl`,
-and `/mb-site`. Update it when the live about page, pricing tiers, or major
+card copy for congruence checks across `/mb-ads`, `/mb-organic`, and `/mb-site`.
+Update it when the live about page, pricing tiers, or major
 claims change.
 
 `core/operations/membership/pricing.md` captures price points, billing
@@ -131,7 +131,7 @@ For retention analysis, preserve the operating insight that people often stay
 for the founder's point of view, taste, and curation rather than for a growing
 feature stack. Skills should look for:
 
-- founder personality and epiphany bridges in the offer and VSL;
+- founder personality and epiphany bridges in the offer and sales video;
 - members adopting language, rituals, and named enemies;
 - curated paths through content rather than "more modules" as the default fix;
 - retention evidence in `core/proof/typicality.md`, case summaries, and
