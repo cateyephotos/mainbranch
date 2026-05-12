@@ -171,8 +171,8 @@ through Ops.
 - Beginner-safe connector flows for GitHub, Cloudflare, Google, Meta, Apify
 - deeper site/CMS rails on top of `mb site check` over Cloudflare, GitHub, and
   operator-approved measurement
-- richer Paid, Organic, Pages, and Ops surfaces (books, P&L, meetings,
-  fulfillment, compliance)
+- richer Paid, Organic, Pages, and Ops surfaces (bookkeeping through
+  `mb books`, P&L, meetings, fulfillment, compliance)
 
 ## 4. Reflect
 
@@ -298,11 +298,12 @@ Underneath Ship sit the four channels every operator can recognize:
 - **Organic** — owned audience content (Reels, TikTok, threads, YouTube,
   newsletter, Skool posts)
 - **Pages** — landers, minisites, websites, public bet pages, deployed assets
-- **Ops** — bookkeeping (Beancount), P&L, compliance, integrations, meetings,
+- **Ops** — bookkeeping (hledger), P&L, compliance, integrations, meetings,
   fulfillment, repo topology, team updates, and operating health
 
 Skills cluster by channel today (`/mb-ads` for Paid, `/mb-organic` and
-`/mb-vsl` for Organic, `/mb-site` for Pages, `mb books` planned for Ops).
+`/mb-vsl` for Organic, `/mb-site` for Pages, `mb books check` for
+bookkeeping Ops).
 Channels grow over time without bloating the loop count — adding new sidecar
 CLIs adds new Ship channels, not new loops.
 

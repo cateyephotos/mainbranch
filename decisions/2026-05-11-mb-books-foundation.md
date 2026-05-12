@@ -2,7 +2,7 @@
 type: decision
 date: 2026-05-11
 status: accepted
-topic: mb books foundation and safe ledger contract
+topic: mb books bookkeeping foundation and safe ledger contract
 linked_issues:
   - https://github.com/noontide-co/mainbranch/issues/483
   - https://github.com/noontide-co/mainbranch/issues/128
@@ -19,7 +19,7 @@ participants: [Devon, Claude]
 tags: [books, finance, hledger, safety, foundation]
 ---
 
-# mb books foundation and safe ledger contract
+# `mb books` Bookkeeping Foundation and Safe Ledger Contract
 
 ## Decision
 
@@ -29,14 +29,14 @@ optional for base `mb` installs, but it is the chosen bookkeeping
 engine when using `mb books`.
 
 CSV and SQLite can be import staging, source snapshots, caches, or
-report outputs. They are not the books.
+report outputs. They are not the bookkeeping record.
 
-`mb books` is a planned command group whose first responsibility is to
-validate that a business repo carries **safe bookkeeping metadata**, not
-to read or write real ledgers. Main Branch owns the operator workflow
-and wraps hledger in plain-language commands. Real financial ledgers
-stay local and gitignored by default. The team-visible business repo
-commits only safe metadata, fake fixtures, and documentation.
+`mb books` is a command group whose first shipped surface validates that a
+business repo carries **safe bookkeeping metadata**, not real ledgers. Main
+Branch owns the operator workflow and wraps hledger in plain-language
+commands. Real financial ledgers stay local and gitignored by default. The
+team-visible business repo commits only safe metadata, fake fixtures, and
+documentation.
 
 The product stance:
 
@@ -52,9 +52,9 @@ The product stance:
 - nothing in this decision promises a QuickBooks, Xero, or bookkeeper
   replacement.
 
-This decision codifies the foundation and names the first `mb books`
-surface. It does not ship the command. Implementation lands in a
-follow-up issue that references this decision.
+This decision codifies the foundation and named the first `mb books`
+surface. `mb books check` shipped in the follow-up implementation issue
+(#486).
 
 ## Why hledger
 
@@ -135,10 +135,9 @@ Three layers, in this order of preference:
    core must not. The shell-out boundary is what keeps the licence
    and install profile clean.
 
-## Optional Extras Packaging (Planned, Not Shipped)
+## Optional Extras Packaging (Deferred)
 
-When `mb books check` ships, the implementation issue should consider
-exposing the deeper-validation paths as a small optional extra:
+Deeper-validation paths may later become a small optional extra:
 
 ```bash
 pip install "mainbranch[books]"
@@ -152,22 +151,23 @@ helper code `mb` needs to shell out to `hledger` cleanly. The base
 report without it. Importers, deeper reports, and a viewer are not
 add-ons that this decision commits to ship.
 
-## Storage Model: Private Books Vault
+## Storage Model: Private Bookkeeping Vault
 
-Git history for the books is valuable for auditability. GitHub-by-default
+Git history for bookkeeping is valuable for auditability. GitHub-by-default
 is **not**. Git is the history engine; GitHub is a remote
-collaboration/backup service. For real books those are not the same
+collaboration/backup service. For real bookkeeping those are not the same
 thing.
 
-The user-facing term Main Branch uses is **private books vault**. `mb`
+The user-facing term Main Branch uses is **private bookkeeping vault**. `mb`
 creates and enforces the ignore rules. Operators do not need to learn
-`.gitignore` to keep their books out of GitHub.
+`.gitignore` to keep raw bookkeeping out of GitHub. The default path remains
+`.mb/private/books/` because the command group is `mb books`.
 
 Three storage modes:
 
 ### 1. Solo local (default)
 
-The real books live in a private books vault inside the business repo's
+The real bookkeeping lives in a private bookkeeping vault inside the business repo's
 local operational area, but are ignored by the business repo's tracked
 content and never pushed to its remote. The vault carries its own local
 git history.
@@ -175,7 +175,7 @@ git history.
 Default layout:
 
 ```text
-.mb/private/books/                # private books vault (own local git history)
+.mb/private/books/                # private bookkeeping vault (own local git history)
   main.journal                    # real hledger journal (authoritative ledger)
   imports/                        # raw bank/Stripe/PayPal exports
   cache/                          # SQLite cache/staging
@@ -195,14 +195,14 @@ Rules:
 
 ### 2. Team private repo (team finance mode)
 
-When more than one person needs the books, the vault graduates to a
-separate private books repo with restricted access.
+When more than one person needs bookkeeping access, the vault graduates to a
+separate private bookkeeping repo with restricted access.
 
 ```text
 private-books-repo/               # separate GitHub private repo, restricted access
   books/main.journal              # real hledger journal (authoritative ledger)
   books/rules/                    # real import rules
-  books/policies.md               # books policies
+  books/policies.md               # bookkeeping policies
   books/month-close.md            # close runbooks
   books/reports/monthly-summary.md
   books/imports/                  # usually ignored
@@ -220,24 +220,24 @@ Rules:
   main business repo's permissions do not apply here.
 - PR review by another finance/admin user is the expected workflow
   for transaction changes.
-- The main business repo never contains the real books, even when
+- The main business repo never contains the real bookkeeping records, even when
   team mode is active.
 
 Why a separate repo and not a private folder: GitHub permissions are
 repo-level. If 20 people have access to the main repo, then a "private"
-folder inside it is not private. Real books for a team always live in
-their own repo with their own access control.
+folder inside it is not private. Real bookkeeping for a team always lives in
+its own repo with its own access control.
 
 ### 3. Advanced encrypted / off-platform vault
 
-For teams that do not want real books on GitHub at all. `mb` points
+For teams that do not want real bookkeeping on GitHub at all. `mb` points
 at an encrypted local volume, network drive, or off-platform store.
 This is a deliberate advanced choice, not a default; the setup path
 is the operator's responsibility.
 
 ### GitHub-As-Backup Warning
 
-Whenever real books are tracked on GitHub (team mode or advanced
+Whenever real bookkeeping is tracked on GitHub (team mode or advanced
 choice), `mb books status` / `mb books doctor` must surface this
 warning:
 
@@ -254,7 +254,7 @@ plain language:
 
 ```text
 Books engine:      hledger
-Real books:        Private books vault
+Real bookkeeping: Private bookkeeping vault
 Git history:       local
 GitHub backup:     not enabled
 Encrypted backup:  not configured
@@ -265,7 +265,7 @@ Team mode:
 
 ```text
 Books engine:      hledger
-Books vault:       <repo-name>
+Bookkeeping vault: <repo-name>
 Storage mode:      team private repo
 Remote backup:     enabled
 Access:            restricted
@@ -298,7 +298,7 @@ recommendation, not an error. `core/finance/import-rules/` and
 no Class B data; the check warns if real account identifiers, real
 amounts, or real counterparties appear.
 
-Real ledger material (private books vault; not in the team-visible
+Real ledger material (private bookkeeping vault; not in the team-visible
 business repo). Solo default layout:
 
 ```text
@@ -309,12 +309,12 @@ business repo). Solo default layout:
 .mb/private/books/attachments/     # statements, receipts, tax docs (optional)
 ```
 
-Team mode layout (in a separate private books repo):
+Team mode layout (in a separate private bookkeeping repo):
 
 ```text
 books/main.journal                 # real hledger journal (authoritative)
 books/rules/                       # real import rules
-books/policies.md                  # books policies
+books/policies.md                  # bookkeeping policies
 books/month-close.md               # close runbooks
 books/reports/monthly-summary.md   # finance-team summaries
 books/imports/                     # usually ignored
@@ -343,7 +343,7 @@ class_b_data: true
 ```
 
 `vault_location` is a human-readable pointer Main Branch uses to
-explain where the books live. `mb books check` should refuse to read
+explain where bookkeeping lives. `mb books check` should refuse to read
 the vault's actual contents.
 
 ## Class B Examples For Bookkeeping
