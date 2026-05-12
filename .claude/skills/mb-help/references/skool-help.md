@@ -19,14 +19,15 @@ core/operations/
 
 ## Skool-Specific Workflows
 
-### Skool sales videos
+### Skool conversion copy
 
-Write sales videos/VSLs for your community.
+Write conversion copy for your community.
 
 **What it does:**
-- Routes about-page or sales-page videos through `/mb-site`
-- Uses the shared 18-section VSL framework when long-form structure helps
-- Keeps `/mb-vsl skool` as a compatibility router for existing users
+- Routes about-page or sales-page scripts through `/mb-site`
+- Uses the shared long-form conversion framework when structure helps
+- Routes conversion scripts through the relevant site, ads, research, or
+  repurposing workflow by surface and intent
 - Optimized for community sales
 
 ---

@@ -69,11 +69,11 @@ Both are work. Enriching the core levels up everything downstream.
 
 ## Pull Latest Updates
 
-See **[references/pull-engine-updates.md](references/pull-engine-updates.md)** for the standard engine resolution + pull bash block. Run it at the start of every /mb-think invocation.
+See **[references/pull-engine-updates.md](references/pull-engine-updates.md)** for the standard Main Branch update check. Run it at the start of every /mb-think invocation.
 
 ---
 
-## Tool Detection (CLI Facts First)
+## CLI Facts First
 
 Provider readiness comes from `mb` first. Run or reuse:
 

@@ -10,6 +10,10 @@ Create organic content scripts in your voice — Reels, TikToks, carousels, stat
 
 **Need help?** Type `/mb-help` + your question anytime. If conversation compacts, `/mb-help` reloads fresh context.
 
+**CLI facts first:** Run `mb status --json --peek` from the business repo before
+triage, reference-health checks, or content planning. Use its readiness, drift,
+and ranked-action facts instead of hand-rolled repo-health probes.
+
 ## Output destinations and operator vocabulary
 
 When this skill produces a coordinated push (a content sequence with a goal,
@@ -80,7 +84,7 @@ Detect if user is in the right place:
 
 ## Pull Latest Updates
 
-For the standard engine resolution + pull bash block (and the failure warning), see [`references/pull-engine-updates.md`](references/pull-engine-updates.md). Run it at the start of every invocation.
+For the standard Main Branch update check and failure warning, see [`references/pull-engine-updates.md`](references/pull-engine-updates.md). Run it at the start of every invocation.
 
 Then run `mb status --json --peek` from the business repo and use its
 `readiness`, `drift.items`, and `ranked_actions` facts before asking setup or

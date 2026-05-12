@@ -1,14 +1,21 @@
 ---
 name: mb-setup
-description: "Bootstrap a new business repo with Main Branch structure, or migrate an existing single-offer repo to multi-offer. Use when: (1) New user needs Claude Code environment configured (2) User says \"set up\", \"get started\", \"initialize\", \"bootstrap\", \"create my repo\", \"new business\" (3) User is new to Main Branch and needs full onboarding (4) Migrating existing business context into the Main Branch structure (5) User wants to add a second offer to an existing repo. Creates engine/business-repo wiring, a business repo with full structure, and bounded context until core files are useful. Applies business setup patterns. Teaches concepts during setup."
+description: "Bootstrap a new business folder with Main Branch structure, or migrate an existing single-offer folder to multi-offer. Use when: (1) New user needs Claude Code environment configured (2) User says \"set up\", \"get started\", \"initialize\", \"bootstrap\", \"create my repo\", \"new business\" (3) User is new to Main Branch and needs full onboarding (4) Migrating existing business context into the Main Branch structure (5) User wants to add a second offer to an existing repo. Creates CLI and skill wiring, a business folder with full structure, and bounded context until core files are useful. Applies business setup patterns. Teaches concepts during setup."
 loops: [sense, decide, ship]
 ---
 
 # Repo Setup
 
 Get a new user fully configured with Claude Code and their business repo. Use
+shipped `mb` commands for setup facts before teaching concepts or reading
+reference prose.
+
+**CLI facts first:** Run `mb doctor`, `mb start --json`, and
+`mb status --json --peek` when a repo exists or can be identified. Use
 `mb onboard status --json` and `mb onboard plan` as the durable progress
-contract; do not keep onboarding state only in chat prose.
+contract; do not keep onboarding state only in chat prose. If there is no repo
+yet, use `mb onboard plan` / `mb onboard` to create one instead of hand-rolling
+repo-shape checks.
 
 For provider setup, use `mb connect plan` and `mb connect doctor --json` as the
 durable readiness contract. Explain providers as business capabilities, not
@@ -44,9 +51,9 @@ Do **not** silently switch strategies. Ask the user first, in beginner language:
 
 For first-time setup, do not default to "switch workspace now." Prefer option 1 or 2 unless the user already has the target repo workspace ready.
 
-### Pull Latest Engine Updates and Detect CWD (FIRST)
+### Check Main Branch Updates and Detect CWD (FIRST)
 
-**Repair Main Branch wiring + detect CWD before context gathering.** Three cases: CWD is the business repo (happy path), CWD is the engine repo (migration), or CWD is neither (ask user).
+**Repair Main Branch wiring + detect CWD before context gathering.** Three cases: CWD is the business folder (happy path), CWD is the Main Branch source checkout (migration), or CWD is neither (ask user).
 
 See **[references/cwd-detection.md](references/cwd-detection.md)** for the full repair path and all three cases (Case 1 happy path, Case 2 engine migration, Case 3 ask). This must happen BEFORE any context gathering — if conversation compacts later, the essential config is already saved.
 
@@ -62,16 +69,18 @@ See **[references/cwd-detection.md](references/cwd-detection.md)** for the full 
 
 **If not installed or user declines:** Proceed with URL fetching, Playwright, or manual screenshots. The extension is convenient but not required.
 
-### 1. Confirm Git + Working Directory
+### 1. Confirm Repo + Working Directory
 
 ```bash
-git status  # Verify we're in a git repo
-pwd         # Confirm working directory
+mb doctor
+mb start --json
+mb status --json --peek
+pwd
 ```
 
-If not a git repo:
+If no business repo exists yet:
 ```bash
-git init
+mb onboard plan --team-size solo --success-stage working
 ```
 
 **Visibility default for business repos: private.** A business repo holds
@@ -369,7 +378,7 @@ See `references/git-workflow.md` for the full guide.
 ## References
 
 - **Repo Visibility Rubric:** `references/repo-visibility-rubric.md` — Private-by-default, the one visibility question for site repos, and what visibility does not decide
-- **CWD Detection:** `references/cwd-detection.md` — Check engine updates + Case 1/2/3 flows for detecting where the user is
+- **CWD Detection:** `references/cwd-detection.md` — Check Main Branch updates + Case 1/2/3 flows for detecting where the user is
 - **File Education:** `references/file-education.md` — What to teach the user about each core file, priority order, visual style scaffolding
 - **Context Gathering:** `references/context-gathering.md` — Checklists by business type, completeness criteria
 - **Templates:** `references/templates.md` — All file templates
@@ -417,7 +426,7 @@ Once setup is complete, tell the user:
 > claude
 > /mb-start
 > ```
-> Main Branch linkage is managed by setup (`settings.local.json` + compatibility bridge links) — no need to touch the Main Branch engine folder.
+> Main Branch linkage is managed by setup (`settings.local.json` + compatibility bridge links) — no need to touch the Main Branch package or source-checkout folder.
 >
 > **Key skills to try:**
 > - `/mb-think` — Research topics, make decisions, update reference
@@ -429,7 +438,7 @@ Once setup is complete, tell the user:
 >
 > **The core loop:** Use `/mb-think` regularly. Research → Decide → Codify. This is how your core files get smarter over time.
 >
-> **Remember:** Type `/mb-help` + your question anytime. It has comprehensive answers about Terminal basics, the engine/business-repo model, skills, troubleshooting, and more."
+> **Remember:** Type `/mb-help` + your question anytime. It has answers about Terminal basics, the business folder, CLI, skills, troubleshooting, and more."
 
 **If whisper-cpp was missing during setup:**
 
