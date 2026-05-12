@@ -142,6 +142,17 @@ context", or "Proof is connected to outcome feedback." Avoid claims such as
 "good proof", "bad proof", "high-converting proof", "ready to win", or
 "persuasive proof."
 
+`mb status --json` also includes a `content_strategy` section for layered
+content-strategy health. It reports whether the simple
+`core/content-strategy.md` entry point exists, which optional distribution,
+channel, account, and person layers exist, whether layers are indexed from the
+business strategy, whether account layers resolve their channel and voice
+source, and whether fast-changing channel/account layers are stale. Dashboard
+and runtime callers should read these normalized facts instead of parsing raw
+markdown. Use `overall_state` as summary health and `findings[].code` for
+repair cards, such as `content_strategy_unindexed_layer` when a layer exists
+but is not indexed from `core/content-strategy.md`.
+
 ## First Migrated Surfaces
 
 The v1 envelope is present on:
