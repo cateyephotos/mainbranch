@@ -24,3 +24,6 @@ __pycache__/
 .agent/
 .context/
 .claude/*.lock
+# Claude local runtime state
+.claude/settings.local.json
+.claude/worktrees/
