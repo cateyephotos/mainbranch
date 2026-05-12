@@ -107,8 +107,8 @@ profiles include the healthy first-day repo, broken project-local skill wiring,
 synthetic private-data refusal material, legacy campaigns/schema drift, launch
 readiness gaps, and dirty approved business files for checkpoint planning.
 Evidence records the profile name, mutations applied, relevant read-only `mb`
-command facts, post-run git state, permission-denial count, and grounding
-verdict.
+command facts, post-run git state, fresh-session ids, permission-denial summary
+by category, and grounding verdict.
 
 ## Running The Suite
 
@@ -152,11 +152,13 @@ checklist. Keep raw local paths and long transcripts out of public comments.
 Print-mode runs intentionally prepend the harness venv's `mb` executable to
 `PATH` and pass Claude Code a read-only allowlist for deterministic `mb`
 grounding commands such as `mb status`, `mb start`, `mb doctor`, `mb validate`,
-and `mb checkpoint --plan`. The harness does not use permission-bypass mode and
-does not allowlist write/edit tools, checkpoint saves, repair applies,
-migrations, or git commits. If a transcript still shows read-only `mb` commands
-were denied, classify the run as permission-distorted proxy evidence and record
-the fallback rather than treating the heuristic rubric as a full pass.
+`mb books check`, `mb educational`, and `mb checkpoint --plan`. Each
+simulation runs in a fresh print-mode session because every simulation has its
+own fixture repo. The harness does not use permission-bypass mode and does not
+allowlist write/edit tools, checkpoint saves, repair applies, migrations, or git
+commits. If a transcript still shows read-only `mb` commands were denied,
+classify the run as permission-distorted proxy evidence and record the fallback
+rather than treating the heuristic rubric as a full pass.
 When deterministic fixture facts were captured for the same scenario, the
 harness labels that as partial proxy evidence with deterministic fallback,
 still not as interactive TUI proof.
@@ -166,6 +168,26 @@ still not as interactive TUI proof.
 Do not stop at pass/fail. The keyword rubric in `rubric.json` is proxy
 evidence; the release question is whether Claude behaved like Main Branch in a
 normal owner session.
+
+Review in two layers:
+
+1. **Deterministic proof.** Confirm the fixture, command artifacts, post-run
+   git state, permissions, and release gates prove what the release claims.
+2. **Agent judgment.** Read the transcript as an operator session. Look for
+   product opportunities even when the deterministic layer passed: missing
+   `mb` affordances, weak business routing, unclear repair guidance, avoidable
+   plumbing, or places where Claude had to work around missing product facts.
+
+Answer these questions before calling the transcript review done:
+
+- Did Claude actually run or read `mb` facts?
+- Did permissions block read-only grounding?
+- Did Claude ask before durable writes?
+- Did Claude return from technical checks to business-owner language?
+- Did Claude work around a missing product affordance, JSON field, repair path,
+  fixture, or evidence template?
+- Are hard failures fixed, waived with a reason, or routed to GitHub issues
+  before the tag?
 
 Review the transcript against the prompt fixture's `must_observe` and
 `must_not` lists, the command artifacts from the same run, and any post-run git
