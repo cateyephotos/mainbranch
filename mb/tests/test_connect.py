@@ -34,11 +34,16 @@ def test_provider_registry_includes_initial_foundation() -> None:
         "cloudflare",
         "postiz",
         "apify",
-        "beancount",
+        "hledger",
         "transcription",
     }.issubset(providers)
+    assert "beancount" not in providers
     assert providers["cloudflare"]["required_secrets"] == ["api_token"]
-    assert providers["beancount"]["required_secrets"] == []
+    assert providers["hledger"]["required_secrets"] == []
+    assert providers["hledger"]["metadata_fields"] == [
+        "journal_path",
+        "vault_path",
+    ]
 
 
 def test_connect_list_json_does_not_create_repo_metadata(tmp_path: Path) -> None:
@@ -349,10 +354,15 @@ def test_connect_test_marks_metadata_only_provider_ready(tmp_path: Path, monkeyp
     repo = tmp_path / "biz"
     repo.mkdir()
     connect_mod.connect_provider(
-        "beancount", repo=repo, metadata_pairs=["ledger_path=core/finance/main.bean"]
+        "hledger",
+        repo=repo,
+        metadata_pairs=[
+            "journal_path=.mb/private/books/main.journal",
+            "vault_path=.mb/private/books/",
+        ],
     )
 
-    result = runner.invoke(app, ["connect", "test", "beancount", "--repo", str(repo), "--json"])
+    result = runner.invoke(app, ["connect", "test", "hledger", "--repo", str(repo), "--json"])
 
     assert result.exit_code == 0
     payload = json.loads(result.stdout)
@@ -823,7 +833,12 @@ def test_doctor_and_status_include_integration_state(tmp_path: Path, monkeypatch
     repo = tmp_path / "biz"
     repo.mkdir()
     connect_mod.connect_provider(
-        "beancount", repo=repo, metadata_pairs=["ledger_path=core/finance/main.bean"]
+        "hledger",
+        repo=repo,
+        metadata_pairs=[
+            "journal_path=.mb/private/books/main.journal",
+            "vault_path=.mb/private/books/",
+        ],
     )
 
     doctor_report = runner.invoke(app, ["doctor", str(repo), "--json"])
