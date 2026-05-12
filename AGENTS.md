@@ -139,39 +139,36 @@ Do not commit:
 - private community operations, launch plans, or partner/customer strategy;
 - untested runtime compatibility claims.
 
-Use OS temp for throwaway build artifacts, scratch repos, and smoke-test output.
-Use `.context/` only for repo-bound handoff notes such as `cold-start.md` or
-branch-specific collaboration state. It is gitignored and is not durable product
-truth. Durable truth belongs in code, tests, docs, decisions, fixtures, or GitHub
-issues.
+Use OS temp for throwaway scratch repos. Use `.agent/` for repo-local,
+gitignored agent logs, smoke-test evidence, and branch-local handoff notes.
+Some hosted runners may provide their own ignored scratch space; public examples
+in this repo use `.agent/`. Scratch space is not durable product truth. Durable
+truth belongs in code, tests, docs, decisions, fixtures, or GitHub issues.
 
 ## Start Protocol
 
-Before editing:
+Use [`docs/agent-cold-start.md`](docs/agent-cold-start.md) for the full
+cold-start sequence. The short version:
 
-1. Read this file.
-2. Read `README.md`.
-3. Read `docs/ethos.md`.
-4. Read the assigned GitHub/Linear issue and all comments.
-5. If the work touches public product shape, release discipline, runtime claims,
-   contributor workflow, or public/private boundaries, apply
-   `docs/oss-operating-checklist.md`.
-6. If the work touches roadmap, priorities, workflow shape, or product framing,
-   read:
-   - `docs/operator-loops.md`
-   - `docs/roadmap.md`
-7. If the work touches v0.2 product direction, read:
-   - `decisions/2026-05-02-github-native-business-os.md`
-   - `docs/prd/v0-2-first-run-daily-briefing.md`
-   - `docs/prd/v0-2-agent-workflow-and-evals.md`
-8. If the work touches the CLI/runtime boundary, read:
-   - `decisions/2026-05-01-mb-cli-vs-agent-workflows-boundary.md`
-   - `docs/compatibility.md`
-9. If the work touches skills, inspect the relevant
-   `.claude/skills/<name>/SKILL.md` and nearby tests or fixtures.
-10. Check open PRs for overlapping files before making broad edits.
+1. Read the always-read set first: this file, `README.md`, `docs/ethos.md`,
+   `docs/operator-loops.md`, `docs/roadmap.md`,
+   `docs/oss-operating-checklist.md`, and the current `CHANGELOG.md`
+   `[Unreleased]` plus latest shipped section.
+2. Read the assigned GitHub issue and all comments. Maintainer and hosted
+   agents with Linear access then call Linear MCP `get_issue` for the mirrored
+   Linear issue and use the returned `gitBranchName` as the branch name.
+   External contributors without Linear access can use a GitHub-native branch
+   name and reference the issue in the PR. GitHub is the public durable work
+   thread for comments by default; Linear-only comments are for private logs or
+   internal team context.
+3. Write a local cold-start note for substantial branches before editing.
+4. Progressively discover task-specific docs and decisions only after the work
+   thread is clear: runtime docs for runtime claims, release docs for
+   release-bearing work, skill docs for skill changes, PRDs/decisions for
+   product choices, and post-release docs for post-release sweeps.
+5. Check open PRs for overlapping files before making broad edits.
 
-For substantial branches, write `.context/cold-start.md` before editing:
+For substantial branches, write a local cold-start note before editing:
 
 ```md
 # Cold Start
@@ -225,20 +222,29 @@ concern-organized commits.
 
 ## Branches, Issues, and Releases
 
-If a Linear issue exists, use Linear's official branch name when it is provided
-by the issue or task runner. Preserve Linear IDs in branch names, commit
-messages, and PR metadata so Linear Releases can attach work correctly.
+GitHub issues in this repo mirror to Linear. Maintainer and hosted agents with
+Linear access should call Linear MCP `get_issue` for the mirrored Linear issue
+and use its `gitBranchName`; this normally has the shape
+`<username>/main-<number>-<full-ticket-title-lowercase-with-dashes>`. Preserve
+Linear IDs in branch names, commit messages, and PR metadata so Linear Releases
+can attach work correctly.
 
-If no Linear issue exists, use a short concrete branch name such as
-`<gh-username>/status-briefing` or `<gh-username>/runtime-smoke`.
+External contributors without Linear access can use a GitHub-native branch name
+such as `<gh-username>/<issue-number>-<short-title>` and reference the GitHub
+issue in the PR. If work truly has no issue, create the public GitHub issue
+first when the work is product-facing. For non-issue maintenance, use a short
+concrete branch name such as `<gh-username>/status-briefing` or
+`<gh-username>/runtime-smoke`.
 
 GitHub remains the public durable issue thread:
 
 - use `Closes #N` only when the PR fully completes the GitHub issue;
 - use `Refs #N` for partial slices or related context;
-- comment on issues when scope changes, blockers appear, or a branch is ready
-  for review;
-- keep target release and priority visible in `.context/cold-start.md` and PR
+- comment on GitHub issues when scope changes, blockers appear, or a branch is
+  ready for review; the GitHub comment syncs to Linear;
+- use Linear-only comments only for private logs or internal context that should
+  not appear on public GitHub;
+- keep target release and priority visible in the local cold-start note and PR
   bodies for release-bearing work.
 
 ## Linear-Hosted Agents
@@ -247,7 +253,7 @@ When launched from Linear or assigned a Linear issue:
 
 - treat the Linear issue as the task brief, but verify durable details in this
   repository before editing;
-- use the official Linear branch name if the task runner provides it;
+- use the Linear issue's `gitBranchName`;
 - preserve the Linear ID in branch, commit, and PR metadata;
 - map Linear status honestly: move to started/in progress only when coding or
   writing actually begins, and do not mark shipped until release verification
