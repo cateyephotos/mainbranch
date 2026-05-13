@@ -45,6 +45,62 @@ Generate all images first. Design 9:16 vertical first, then center-crop for 1:1 
 
 ### {batch#}.1_IMG_01 — {Descriptive Name}
 
+**Prompt record:**
+```yaml
+prompt_key: "{descriptive-concept-id}.v1"
+prompt_file: "pushes/{push}/prompts/{descriptive-concept-id}.md"
+```
+
+**Creative playbook (optional):**
+```yaml
+id: "{playbook id if one clearly fits, otherwise omit}"
+status: suggested
+use_when:
+  - "{why this playbook fits the source bite, offer, audience, and brand}"
+default_avoid:
+  - "{niche-specific cliché to avoid}"
+useful_metaphors:
+  - "{niche-specific metaphor}"
+risky_metaphors:
+  - "{niche-specific metaphor to avoid unless intentional}"
+prompt_bias:
+  - "{style or artifact bias for this niche}"
+```
+
+**Source bite:**
+```yaml
+source_file: research/customer-language.md
+source_type: customer_language
+extracted_phrase: "{phrase that makes this concept specific}"
+insight: "{why this is sharper than generic chaos/order language}"
+visual_translation: "{how the phrase becomes a one-second visual}"
+```
+
+**Genericness check:**
+```yaml
+could_fit_notion: false
+could_fit_asana: false
+could_fit_quickbooks: false
+could_fit_generic_coaching_offer: false
+could_fit_generic_productivity_app: false
+could_fit_any_coaching_offer: false
+could_fit_accounting_software: false
+specific_to_this_offer: 4
+reason: "{why this image could only come from this business context}"
+```
+
+**Avoidance strategy:**
+```yaml
+avoids:
+  - stock-photo business imagery
+  - clean desk productivity cliché
+  - website hero composition
+  - fake dashboard
+  - generic SaaS gradient
+intentionally_uses: []
+reason: "{why the concept avoids generic ad imagery or why a soft-avoid pattern is intentional}"
+```
+
 **Vertical (1080×1920) — design this first:**
 ```text
 {Full prompt for 9:16 vertical. Place critical content (headline, product, key visual) in center 1:1 zone. Fill top/bottom margins with atmospheric/contextual elements.}
@@ -230,7 +286,9 @@ If a provider generated the image:
 
 ## Image Index
 
-When a provider generates actual images, create an `image-index.md` in the batch folder:
+When planning or generating images, create an `image-index.md` in the batch
+folder. It can hold both planned concepts and generated assets. Link assets
+back to concepts with `concept_id`.
 
 ```markdown
 # Image Index — {Campaign Name}
@@ -243,6 +301,14 @@ Estimated cost: ${estimate}
 Actual cost: ${actual or unknown}
 Post-processing: {dimensions, format, compression, crop rules}
 Approval state: {draft/reviewed/approved}
+
+## Concepts
+
+| Concept ID | Status | Audience State | Visual Job | Placement | Claim Boundary | Review |
+|------------|--------|----------------|------------|-----------|----------------|--------|
+| clean-system-vs-ad-chaos | planned | Overwhelmed operator | Show clarity replacing ad chaos | facebook_feed_portrait_4x5 | No revenue guarantee or Meta partnership claim | accepted |
+
+## Assets
 
 | File | Angle | Style | Format | Prompt Key | Retries | Notes |
 |------|-------|-------|--------|------------|---------|-------|
