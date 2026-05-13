@@ -1302,7 +1302,10 @@ def image_smoke_openai_cmd(
     media_root: str = typer.Option(
         ".mb/media",
         "--media-root",
-        help="Private media storage root used only when --generate writes a binary.",
+        help=(
+            "Private media storage root for the review board and any approved "
+            "9-candidate --generate batch binaries."
+        ),
     ),
     generate: bool = typer.Option(
         False,
@@ -1330,11 +1333,13 @@ def image_smoke_openai_cmd(
     elif result["state"] == "generated":
         typer.echo("OpenAI image rail smoke generated a fixture-safe asset.")
         typer.echo(f"record: {result['record_path']}")
+        typer.echo(f"review board: {result['review_board_path']}")
         typer.echo(f"media:  {result['output_reference']}")
         typer.echo("binary committed: false")
     else:
         typer.echo("OpenAI image rail smoke blocked safely.")
         typer.echo(f"record: {result['record_path']}")
+        typer.echo(f"review board: {result['review_board_path']}")
         typer.echo(f"reason: {result['blocker_code']}")
         typer.echo("I will not ask you to paste provider keys into chat or repo files.")
     raise typer.Exit(0)
