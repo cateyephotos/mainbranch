@@ -112,7 +112,7 @@ The work clusters into a few durable buckets:
   synthesis only when the decision justifies the time, tokens, and permissions.
 - **Books readiness and reporting.** hledger is the accounting engine, `mb
   books` is the privacy, JSON, and workflow wrapper, and skills are the chat UX.
-  Next direction is sample/fake-data reporting before private-vault reports,
+  Next direction is fake-data sample reporting before private-vault reports,
   imports, reconciliation, or close workflows.
 - **Provider rails.** Cloudflare, GitHub, Google/Workspace, ads providers,
   Apify, Postiz-style social scheduling, and future sidecars should enter
