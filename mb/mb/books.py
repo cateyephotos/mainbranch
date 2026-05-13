@@ -446,6 +446,34 @@ def _status_extra_findings(
     return findings
 
 
+def _non_local_vault_location_findings(fm: dict[str, Any]) -> list[dict[str, Any]]:
+    storage_mode = _policy_storage_mode(fm)
+    raw_location = str(fm.get("vault_location") or "").strip()
+    if storage_mode not in NON_LOCAL_STORAGE_MODES or raw_location:
+        return []
+    return [
+        _finding(
+            id="books-vault-location-missing",
+            title="Private books vault location is not configured",
+            state="warn",
+            detail=(
+                f"storage_mode={storage_mode!r} expects the real books to live "
+                "outside this repo, but core/finance/books.md does not name "
+                "the private repo or vault handle."
+            ),
+            audience="operator_decision",
+            operator_summary=(
+                "Set vault_location in core/finance/books.md so the operator "
+                "knows where the private books live."
+            ),
+            repair=(
+                "Add a safe vault_location label to core/finance/books.md; "
+                "do not paste an absolute private path or real ledger data."
+            ),
+        )
+    ]
+
+
 def _detect_books_policy(repo: Path) -> tuple[dict[str, Any], list[dict[str, Any]]]:
     findings: list[dict[str, Any]] = []
     path = repo / "core" / "finance" / "books.md"
@@ -905,6 +933,7 @@ def run(
     findings.extend(policy_findings)
     findings.extend(_detect_chart_of_accounts(repo_path))
     storage_mode = str(fm.get("storage_mode") or "").strip()
+    findings.extend(_non_local_vault_location_findings(fm))
     findings.extend(_check_vault_ignore_rule(repo_path, storage_mode))
     findings.extend(_detect_unsafe_paths(repo_path))
 
@@ -1107,6 +1136,23 @@ def doctor_plan(repo: str | Path = ".") -> dict[str, Any]:
                 ),
                 writes=["core/finance/chart-of-accounts.md"],
                 audience="informational",
+            )
+        )
+
+    if "books-vault-location-missing" in findings:
+        finding = findings["books-vault-location-missing"]
+        actions.append(
+            _plan_action(
+                id="configure-private-books-vault-location",
+                title="Configure private books vault location",
+                state="warn",
+                reason=finding["operator_summary"],
+                command=(
+                    "Set vault_location in core/finance/books.md to a safe private "
+                    "repo or vault label; keep raw finance data out of this repo."
+                ),
+                writes=["core/finance/books.md"],
+                audience="operator_decision",
             )
         )
 

@@ -472,6 +472,66 @@ vault_location: "{private_path.parent}"
     assert str(private_path.parent) not in result.output
 
 
+def test_books_check_status_and_doctor_flag_missing_external_vault_location(
+    tmp_path: Path,
+) -> None:
+    repo = _init_business_repo(tmp_path)
+    _write(
+        repo / "core/finance/books.md",
+        """---
+type: books
+ledger: hledger
+storage_mode: team-private-repo
+---
+
+# Books
+""",
+    )
+    _write(repo / ".gitignore", ".mb/private/\n*.journal\n*.hledger\n*.ledger\n*.beancount\n")
+
+    check_result = runner.invoke(app, ["books", "check", str(repo), "--json"])
+    assert check_result.exit_code == 0, check_result.output
+    check_payload = json.loads(check_result.output)
+    check_findings = _findings_by_id(check_payload)
+    assert check_findings["books-vault-location-missing"]["state"] == "warn"
+
+    status_result = runner.invoke(app, ["books", "status", str(repo), "--json"])
+    assert status_result.exit_code == 0, status_result.output
+    status_payload = json.loads(status_result.output)
+    findings = _findings_by_id(status_payload)
+    assert findings["books-vault-location-missing"]["state"] == "warn"
+    assert status_payload["vault"]["location"] == "not configured"
+
+    doctor_result = runner.invoke(app, ["books", "doctor", str(repo), "--plan", "--json"])
+    assert doctor_result.exit_code == 0, doctor_result.output
+    doctor_payload = json.loads(doctor_result.output)
+    actions = {action["id"]: action for action in doctor_payload["actions"]}
+    assert "configure-private-books-vault-location" in actions
+    assert actions["configure-private-books-vault-location"]["writes"] == ["core/finance/books.md"]
+
+
+def test_books_check_does_not_flag_configured_non_local_vault_location(tmp_path: Path) -> None:
+    repo = _init_business_repo(tmp_path)
+    _write(
+        repo / "core/finance/books.md",
+        """---
+type: books
+ledger: hledger
+storage_mode: team-private-repo
+vault_location: "private-books-repo"
+---
+
+# Books
+""",
+    )
+
+    result = runner.invoke(app, ["books", "check", str(repo), "--json"])
+    assert result.exit_code == 0, result.output
+    payload = json.loads(result.output)
+    findings = _findings_by_id(payload)
+    assert "books-vault-location-missing" not in findings
+
+
 def test_books_doctor_plan_json_lists_safe_repairs(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
