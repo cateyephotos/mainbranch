@@ -12,6 +12,8 @@
 - Adding API keys unlocks new capabilities
 - Skills auto-detect what's available and route accordingly
 - Users never blocked — always graceful fallback
+- Apify is MCP-first research-provider enrichment for now, not automatically an
+  `mb connect` provider.
 
 ---
 
@@ -434,29 +436,33 @@ Tool missing + User wants that research type → Offer setup once per session
 ### Standard Flow (All Research Types)
 
 ```
-1. Detect Intent
+1. Define Question
+   └─> What specifically are you trying to learn?
+
+2. Recommend Depth
+   ├─> For offer/audience/proof/CTA/content/ads/pages/positioning
+   └─> Use research-depth-ladder.md to decide how much research is enough
+
+3. Detect Intent & Route
    └─> Determine research type from user message
 
-2. Check Capabilities
-   └─> Is preferred tool available?
-
-3. Route
+4. Check Capabilities
    ├─> If available: Use preferred tool
    └─> If not: Offer setup or fallback
 
-4. Execute
+5. Execute
    ├─> Gather data (with token limits)
    └─> Estimate cost/tokens before running
 
-5. Synthesize (REQUIRED)
+6. Synthesize (REQUIRED)
    ├─> One-sentence summary (20 words max)
    ├─> Key findings (5-10 bullets)
    └─> Implications for reference files
 
-6. Save
+7. Save
    └─> research/YYYY-MM-DD-topic-[source].md
 
-7. Checkpoint
+8. Checkpoint
    └─> "Ready to make a decision, or need more research?"
 ```
 
