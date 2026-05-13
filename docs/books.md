@@ -11,6 +11,9 @@ function is bookkeeping.
 - Main Branch ships the first safe `mb books` setup surfaces:
   `check`, `status`, and `doctor --plan`. They validate and explain
   bookkeeping safety without reading any real ledger contents.
+- Main Branch also ships a fake-data sample monthly report:
+  `mb books report monthly --sample --month YYYY-MM`. It uses packaged fixture
+  data, not the operator's private books.
 - **Main Branch uses hledger as the bookkeeping engine for `mb books`.**
   The hledger journal is the only authoritative ledger.
 - hledger is **optional** for base `mb` installs, but it is the chosen
@@ -210,6 +213,12 @@ mb books status [REPO] [--json]
 mb books doctor [REPO] --plan [--json]
 ```
 
+The shipped sample reporting surface is:
+
+```bash
+mb books report monthly --sample --month YYYY-MM [--json]
+```
+
 `mb books check` runs read-only checks against a business repo. It:
 
 - detects whether `core/finance/books.md` exists and parses (including
@@ -272,6 +281,13 @@ It does not apply repairs yet. The plan is designed for operator
 review and avoids printing private external vault paths or real
 financial data.
 
+`mb books report monthly --sample` generates a beginner-safe monthly report
+from packaged fake hledger data through hledger. If hledger is unavailable, the
+command fails with install guidance instead of falling back to a non-hledger
+report. It emits stable JSON with `--json`, redacts fixture internals that
+should not train operators to paste private paths or account identifiers, and
+keeps `safe_to_share: true` because the data is synthetic.
+
 Exit codes:
 
 - `mb books check`: `0` when there are no error findings (info or
@@ -283,6 +299,10 @@ Exit codes:
 - `mb books doctor --plan`: `0` after printing a plan. Running
   `mb books doctor` without `--plan` exits `2` because applying
   repairs is not implemented.
+- `mb books report monthly --sample`: `0` when the sample report is generated;
+  `1` for generation failures such as missing hledger or missing fixture;
+  `2` for usage errors such as missing `--sample`, missing `--month`, or an
+  invalid month.
 
 It does **not**:
 
@@ -294,8 +314,8 @@ It does **not**:
 - mutate any file.
 
 Later slices may add real imports, reconciliation, month close, or
-fixture-safe reporting only after separate decisions and smoke
-evidence. They are not part of the current command surface.
+private-vault reporting only after separate decisions and smoke evidence. They
+are not part of the current command surface.
 
 The full first-surface spec lives in
 [the mb books foundation decision](../decisions/2026-05-11-mb-books-foundation.md).
